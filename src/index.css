@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --green:       #0A9E6E;
+  --green-dark:  #063D2A;
+  --green-mid:   #0D7A55;
+  --green-light: #E8F7F2;
+  --ink:         #0B1E16;
+  --muted:       #6B9080;
+  --muted-2:     #A8C4B8;
+  --surface:     #F4FAF7;
+  --surface-2:   #FFFFFF;
+  --border:      #D6EDE5;
+  --border-2:    #EAF5EF;
+  --amber:       #F59E0B;
+  --amber-bg:    #FFF8E7;
+  --red:         #EF4444;
+  --red-bg:      #FEF2F2;
+  --blue:        #3B82F6;
+  --blue-bg:     #EFF6FF;
+  --purple:      #8B5CF6;
+  --purple-bg:   #F5F3FF;
+  --sidebar-w:   240px;
+  --radius:      14px;
+  --radius-sm:   8px;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: 'DM Sans', sans-serif; cursor: pointer; }
+input, select, textarea { font-family: 'DM Sans', sans-serif; }
+a { text-decoration: none; color: inherit; }
