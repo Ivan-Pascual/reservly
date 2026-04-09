@@ -459,8 +459,12 @@ export default function Ajustes() {
                     setGoogleMsg('✓ Conectado correctamente');
                     setTimeout(() => setGoogleMsg(''), 3000);
                   } catch (err) {
-                    setGoogleMsg('Error al conectar. Inténtalo de nuevo.');
-                  }
+  console.error('Error Google Calendar:', err);
+  console.error('Tipo:', err?.type);
+  console.error('Mensaje:', err?.message);
+  console.error('Error completo:', JSON.stringify(err));
+  setGoogleMsg('Error: ' + (err?.message || err?.type || JSON.stringify(err) || 'desconocido'));
+}
                   setGoogleCargando(false);
                 }} disabled={googleCargando}
                   style={{ width:'100%', padding:'10px', background: googleCargando ? '#A8C4B8' : '#4285F4', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor: googleCargando ? 'not-allowed' : 'pointer', marginBottom:8 }}>
