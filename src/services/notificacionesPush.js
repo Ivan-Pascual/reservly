@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNegocio } from '../../hooks/useNegocio';
-import { supabase } from '../../supabase';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 const HORAS = Array.from({ length: 20 }, (_, i) => {
