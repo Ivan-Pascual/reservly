@@ -20,6 +20,7 @@ import Estadisticas from './pages/estadisticas/Estadisticas';
 import Agenda from './pages/agenda/Agenda';
 import PaginaPublica from './pages/publica/PaginaPublica';
 import ErrorBoundary from './components/ErrorBoundary';
+import Stock from './pages/stock/Stock';
 
 const TITULOS = {
   '/dashboard':    'Inicio',
@@ -123,6 +124,7 @@ export default function App() {
                   <Route path="/estadisticas"   element={<Estadisticas />} />
                   <Route path="/ajustes"        element={<Ajustes />} />
                   <Route path="/vacaciones"     element={<Vacaciones />} />
+                  <Route path="/stock" element={<Stock />} />
                   <Route path="/tpv/:reservaId" element={<TPV />} />
                   <Route path="*"               element={<NotFound />} />
                 </Routes>

@@ -87,7 +87,7 @@ export default function Sidebar({ onClose }) {
         <NavItem to="/clientes"   emoji="👤"  label="Clientes"          onClose={cerrarSidebar} />
         <NavItem to="/empleados"  emoji="👥"  label="Empleados"         onClose={cerrarSidebar} />
         <NavItem to="/servicios"  emoji="✂️"  label="Servicios"         onClose={cerrarSidebar} />
-
+        <NavItem to="/stock" emoji="📦" label="Stock" onClose={cerrarSidebar} />
         <div style={{ height: 1, background: '#ffffff10', margin: '12px 0' }} />
 
         <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', color: '#ffffff40', textTransform: 'uppercase', padding: '8px 12px 6px' }}>

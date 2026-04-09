@@ -1,175 +1,267 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
-
-const METODOS = [
-  { id: 'efectivo', emoji: '💵', label: 'Efectivo' },
-  { id: 'tarjeta',  emoji: '💳', label: 'Tarjeta'  },
-  { id: 'bizum',    emoji: '📱', label: 'Bizum'     },
-  { id: 'bono',     emoji: '🎁', label: 'Bono'      },
-];
-
-const PROPINAS_RAPIDAS = [2, 5, 10];
+import { useNegocio } from '../../hooks/useNegocio';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
 export default function TPV() {
   const { reservaId } = useParams();
   const navigate = useNavigate();
+  const { negocio } = useNegocio();
+  const isMobile = useIsMobile();
+  const codigoRef = useRef(null);
+  const videoRef = useRef(null);
+  const readerRef = useRef(null);
 
   const [reserva, setReserva] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [procesando, setProcesando] = useState(false);
-  const [cobrado, setCobrado] = useState(false);
-
-  const [metodo, setMetodo] = useState('efectivo');
+  const [productos, setProductos] = useState([]);
+  const [lineas, setLineas] = useState([]);
+  const [metodoPago, setMetodoPago] = useState('efectivo');
   const [propina, setPropina] = useState(0);
-  const [propinaTxt, setPropinaTxt] = useState('');
-  const [enviarFactura, setEnviarFactura] = useState(true);
-  const [descuento, setDescuento] = useState(0);
-  const [notaTPV, setNotaTPV] = useState('');
-  const [productosVendidos, setProductosVendidos] = useState([]);
-  const [productoForm, setProductoForm] = useState({ nombre: '', precio: '' });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [codigoBarras, setCodigoBarras] = useState('');
+  const [modoEscaneo, setModoEscaneo] = useState(null); // null | 'pistola' | 'camara'
+  const [errorCodigo, setErrorCodigo] = useState('');
+  const [productoManual, setProductoManual] = useState({ nombre:'', precio:'' });
+  const [showManual, setShowManual] = useState(false);
+  const [camaraActiva, setCamaraActiva] = useState(false);
 
   useEffect(() => {
-    fetchReserva();
-  }, [reservaId]);
+    if (!negocio) return;
+    fetchData();
+    return () => detenerCamara();
+  }, [negocio]);
 
-  const fetchReserva = async () => {
-    const { data } = await supabase
-      .from('reservas')
-      .select(`
-        *,
-        clientes(id, nombre, email, telefono),
-        empleados(nombre, color),
-        servicios(nombre, precio, duracion)
-      `)
-      .eq('id', reservaId)
-      .single();
+  const fetchData = async () => {
+    const [resRes, prodRes] = await Promise.all([
+      supabase.from('reservas').select(`
+        *, clientes(nombre, telefono), empleados(nombre), servicios(nombre, precio)
+      `).eq('id', reservaId).single(),
+      supabase.from('productos').select('*')
+        .eq('negocio_id', negocio.id).eq('activo', true).order('nombre'),
+    ]);
 
-    if (data) {
-      // Seguridad: no permitir cobrar una reserva ya completada o cancelada
-      if (data.estado === 'completada') {
-        alert('Esta reserva ya ha sido cobrada.');
-        navigate('/reservas');
-        return;
-      }
-      if (data.estado === 'cancelada') {
-        alert('No se puede cobrar una reserva cancelada.');
-        navigate('/reservas');
-        return;
-      }
-      setReserva(data);
-
-      // Verificar si ya tiene TPV registrado
-      const { data: tpvExistente } = await supabase
-        .from('tpv')
-        .select('id')
-        .eq('reserva_id', reservaId)
-        .single();
-
-      if (tpvExistente) {
-        alert('Esta reserva ya tiene un cobro registrado.');
-        navigate('/reservas');
-        return;
+    if (resRes.data) {
+      setReserva(resRes.data);
+      if (resRes.data.servicios) {
+        setLineas([{
+          id:          'servicio',
+          nombre:      resRes.data.servicios.nombre,
+          precio:      resRes.data.servicios.precio || 0,
+          tipo:        'servicio',
+          producto_id: null,
+          cantidad:    1,
+          precio_unit: resRes.data.servicios.precio || 0,
+        }]);
       }
     }
+    if (prodRes.data) setProductos(prodRes.data);
     setLoading(false);
   };
 
-  const precioServicio = reserva?.servicios?.precio || 0;
-  const totalProductos = productosVendidos.reduce((a, p) => a + parseFloat(p.precio || 0), 0);
-  const subtotal = precioServicio + totalProductos;
-  const descuentoImporte = Math.min(descuento, subtotal); // no puede ser mayor al subtotal
-  const totalSinPropina = Math.max(0, subtotal - descuentoImporte);
-  const total = totalSinPropina + propina;
-
-  const añadirProducto = () => {
-    if (!productoForm.nombre.trim() || !productoForm.precio) return;
-    setProductosVendidos([...productosVendidos, {
-      nombre: productoForm.nombre,
-      precio: parseFloat(productoForm.precio),
-    }]);
-    setProductoForm({ nombre: '', precio: '' });
+  // ── Pistola ──────────────────────────────────────────────
+  const activarPistola = () => {
+    detenerCamara();
+    setModoEscaneo('pistola');
+    setErrorCodigo('');
+    setCodigoBarras('');
+    setTimeout(() => codigoRef.current?.focus(), 50);
   };
 
-  const cobrar = async () => {
-    if (procesando || cobrado) return;
+  const handleEscaneo = (e) => {
+    if (e.key === 'Enter') {
+      const codigo = codigoBarras.trim();
+      if (!codigo) return;
+      procesarCodigo(codigo);
+      setCodigoBarras('');
+      setTimeout(() => codigoRef.current?.focus(), 50);
+    }
+  };
 
-    // Validaciones de seguridad
-    if (total < 0) {
-      alert('El total no puede ser negativo.');
-      return;
-    }
-    if (!metodo) {
-      alert('Selecciona un método de pago.');
-      return;
-    }
-    if (descuentoImporte > subtotal) {
-      alert('El descuento no puede ser mayor al subtotal.');
-      return;
-    }
-
-    setProcesando(true);
+  // ── Cámara ───────────────────────────────────────────────
+  const activarCamara = async () => {
+    setModoEscaneo('camara');
+    setErrorCodigo('');
+    setCamaraActiva(false);
 
     try {
-      // 1. Verificar de nuevo que la reserva no está completada (doble check)
-      const { data: reservaActual } = await supabase
-        .from('reservas')
-        .select('estado')
-        .eq('id', reservaId)
-        .single();
-
-      if (reservaActual?.estado === 'completada') {
-        alert('Esta reserva ya fue cobrada por otro usuario.');
-        navigate('/reservas');
+      readerRef.current = new BrowserMultiFormatReader();
+      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      if (!devices || devices.length === 0) {
+        setErrorCodigo('No se encontró ninguna cámara.');
+        setModoEscaneo(null);
         return;
       }
 
-      // 2. Registrar el TPV
-      const { data: tpvData, error: tpvError } = await supabase
-        .from('tpv')
-        .insert({
-          reserva_id:      reservaId,
-          negocio_id:      reserva.negocio_id,
-          metodo_pago:     metodo,
-          importe:         total,
-          propina:         propina,
-          factura_enviada: enviarFactura,
-        })
-        .select()
-        .single();
+      // Preferir cámara trasera en móvil
+      const camaraIdeal = devices.find(d =>
+        d.label.toLowerCase().includes('back') ||
+        d.label.toLowerCase().includes('trasera') ||
+        d.label.toLowerCase().includes('rear')
+      ) || devices[devices.length - 1];
 
-      if (tpvError) throw new Error('Error al registrar el cobro: ' + tpvError.message);
+      setCamaraActiva(true);
 
-      // 3. Registrar productos vendidos
-      if (productosVendidos.length > 0) {
-        const { error: prodError } = await supabase
-          .from('tpv_productos')
-          .insert(productosVendidos.map(p => ({
-            tpv_id: tpvData.id,
-            nombre: p.nombre,
-            precio: p.precio,
-          })));
-        if (prodError) throw new Error('Error al registrar productos: ' + prodError.message);
+      // Pequeño delay para que el videoRef esté en el DOM
+      setTimeout(async () => {
+        try {
+          await readerRef.current.decodeFromVideoDevice(
+            camaraIdeal.deviceId,
+            videoRef.current,
+            (result, error) => {
+              if (result) {
+                procesarCodigo(result.getText());
+                // Vibrar en móvil como confirmación
+                if (navigator.vibrate) navigator.vibrate(100);
+              }
+            }
+          );
+        } catch (err) {
+          setErrorCodigo('Error al iniciar la cámara: ' + err.message);
+          setCamaraActiva(false);
+        }
+      }, 200);
+    } catch (err) {
+      setErrorCodigo('No se pudo acceder a la cámara. Comprueba los permisos.');
+      setModoEscaneo(null);
+    }
+  };
+
+  const detenerCamara = () => {
+    if (readerRef.current) {
+      try { readerRef.current.reset(); } catch {}
+      readerRef.current = null;
+    }
+    setCamaraActiva(false);
+  };
+
+  const cerrarEscaneo = () => {
+    detenerCamara();
+    setModoEscaneo(null);
+    setCodigoBarras('');
+    setErrorCodigo('');
+  };
+
+  // ── Lógica común ─────────────────────────────────────────
+  const procesarCodigo = (codigo) => {
+    const producto = productos.find(p => p.codigo_barras === codigo);
+    if (producto) {
+      añadirProducto(producto);
+      setErrorCodigo('');
+    } else {
+      setErrorCodigo(`Código "${codigo}" no encontrado en el stock.`);
+    }
+  };
+
+  const añadirProducto = (producto) => {
+    setLineas(prev => {
+      const existente = prev.find(l => l.producto_id === producto.id);
+      if (existente) {
+        return prev.map(l =>
+          l.producto_id === producto.id
+            ? { ...l, cantidad: (l.cantidad||1)+1, precio: ((l.cantidad||1)+1) * (l.precio_unit||0) }
+            : l
+        );
+      }
+      return [...prev, {
+        id:          `prod-${producto.id}-${Date.now()}`,
+        nombre:      producto.nombre,
+        precio:      producto.precio_venta || 0,
+        tipo:        'producto',
+        producto_id: producto.id,
+        cantidad:    1,
+        precio_unit: producto.precio_venta || 0,
+      }];
+    });
+  };
+
+  const añadirManual = () => {
+    if (!productoManual.nombre.trim()) return;
+    setLineas(prev => [...prev, {
+      id:          `manual-${Date.now()}`,
+      nombre:      productoManual.nombre,
+      precio:      parseFloat(productoManual.precio) || 0,
+      tipo:        'manual',
+      producto_id: null,
+      cantidad:    1,
+      precio_unit: parseFloat(productoManual.precio) || 0,
+    }]);
+    setProductoManual({ nombre:'', precio:'' });
+    setShowManual(false);
+  };
+
+  const eliminarLinea = (id) => setLineas(prev => prev.filter(l => l.id !== id));
+
+  const actualizarCantidad = (id, cantidad) => {
+    if (cantidad < 1) return;
+    setLineas(prev => prev.map(l =>
+      l.id === id
+        ? { ...l, cantidad, precio: cantidad * (l.precio_unit || l.precio) }
+        : l
+    ));
+  };
+
+  const subtotal = lineas.reduce((a, l) => a + (l.precio || 0), 0);
+  const total    = subtotal + parseFloat(propina || 0);
+
+  const cobrar = async () => {
+    if (lineas.length === 0) return;
+    setSaving(true);
+    cerrarEscaneo();
+
+    try {
+      const { data: reservaActual } = await supabase
+        .from('reservas').select('estado').eq('id', reservaId).single();
+      if (reservaActual?.estado === 'completada') {
+        alert('Esta reserva ya fue cobrada anteriormente.');
+        setSaving(false);
+        return;
       }
 
-      // 4. Marcar la reserva como completada y guardar precio final
-      const { error: resError } = await supabase
-        .from('reservas')
-        .update({
-          estado:       'completada',
-          precio_final: total,
-          notas:        notaTPV || reserva.notas,
-        })
-        .eq('id', reservaId);
+      const { data: tpv, error: tpvError } = await supabase
+        .from('tpv').insert({
+          reserva_id:  reservaId,
+          negocio_id:  negocio.id,
+          metodo_pago: metodoPago,
+          importe:     total,
+          propina:     parseFloat(propina) || 0,
+        }).select().single();
 
-      if (resError) throw new Error('Error al actualizar la reserva: ' + resError.message);
+      if (tpvError || !tpv) throw new Error('Error al crear el cobro.');
 
-      setCobrado(true);
+      await supabase.from('tpv_productos').insert(
+        lineas.map(l => ({ tpv_id: tpv.id, nombre: l.nombre, precio: l.precio || 0 }))
+      );
 
+      await supabase.from('reservas').update({
+        estado:       'completada',
+        precio_final: total,
+      }).eq('id', reservaId);
+
+      // Descontar stock
+      for (const linea of lineas.filter(l => l.producto_id)) {
+        const producto = productos.find(p => p.id === linea.producto_id);
+        if (!producto) continue;
+        const nuevoStock = Math.max(0, producto.stock_actual - (linea.cantidad || 1));
+        await Promise.all([
+          supabase.from('productos').update({ stock_actual: nuevoStock }).eq('id', linea.producto_id),
+          supabase.from('stock_movimientos').insert({
+            producto_id: linea.producto_id,
+            negocio_id:  negocio.id,
+            tipo:        'salida',
+            cantidad:    linea.cantidad || 1,
+            motivo:      `TPV reserva ${reservaId.slice(0,8)}`,
+          }),
+        ]);
+      }
+
+      navigate('/reservas');
     } catch (err) {
-      alert(err.message || 'Error al procesar el cobro. Inténtalo de nuevo.');
-      setProcesando(false);
+      alert(err.message || 'Error al cobrar.');
     }
+    setSaving(false);
   };
 
   if (loading) return (
@@ -180,267 +272,250 @@ export default function TPV() {
 
   if (!reserva) return (
     <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ fontSize:14, color:'#6B9080' }}>Reserva no encontrada</div>
+      <div style={{ fontSize:14, color:'#EF4444' }}>Reserva no encontrada</div>
     </div>
   );
 
-  // Pantalla de cobro exitoso
-  if (cobrado) return (
-    <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#F4FAF7', flexDirection:'column', gap:20, padding:40 }}>
-      <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:20, padding:'48px 40px', textAlign:'center', maxWidth:420, width:'100%' }}>
-        <div style={{ width:72, height:72, borderRadius:'50%', background:'#E8F7F2', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 20px' }}>✓</div>
-        <h2 style={{ fontSize:24, fontWeight:700, color:'#0B1E16', marginBottom:8 }}>Cobro registrado</h2>
-        <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>
-          {reserva.clientes?.nombre} · {total.toFixed(2)} EUR · {metodo}
-        </p>
-        <div style={{ background:'#F4FAF7', borderRadius:12, padding:16, marginBottom:24, textAlign:'left' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, padding:'4px 0' }}>
-            <span style={{ color:'#6B9080' }}>Servicio</span>
-            <span style={{ fontWeight:600 }}>{precioServicio.toFixed(2)} EUR</span>
-          </div>
-          {totalProductos > 0 && (
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, padding:'4px 0' }}>
-              <span style={{ color:'#6B9080' }}>Productos</span>
-              <span style={{ fontWeight:600 }}>{totalProductos.toFixed(2)} EUR</span>
-            </div>
-          )}
-          {descuentoImporte > 0 && (
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, padding:'4px 0' }}>
-              <span style={{ color:'#6B9080' }}>Descuento</span>
-              <span style={{ fontWeight:600, color:'#EF4444' }}>-{descuentoImporte.toFixed(2)} EUR</span>
-            </div>
-          )}
-          {propina > 0 && (
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, padding:'4px 0' }}>
-              <span style={{ color:'#6B9080' }}>Propina</span>
-              <span style={{ fontWeight:600, color:'#0A9E6E' }}>{propina.toFixed(2)} EUR</span>
-            </div>
-          )}
-          <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, padding:'8px 0 0', borderTop:'1px solid #EAF5EF', marginTop:6 }}>
-            <span style={{ fontWeight:700 }}>Total</span>
-            <span style={{ fontWeight:700, color:'#0A9E6E' }}>{total.toFixed(2)} EUR</span>
-          </div>
-        </div>
-        {enviarFactura && (
-          <div style={{ background:'#EFF6FF', borderRadius:8, padding:'10px 14px', marginBottom:20, fontSize:12.5, color:'#1E40AF' }}>
-            📧 Factura enviada a {reserva.clientes?.email || 'cliente'}
-          </div>
-        )}
-        <button onClick={() => navigate('/reservas')}
-          style={{ width:'100%', background:'#0A9E6E', color:'#fff', border:'none', padding:'12px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
-          Volver a reservas
-        </button>
-      </div>
-    </div>
-  );
+  const pad = isMobile ? 16 : 32;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
-      {/* Topbar */}
-      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:'0 32px', height:60, display:'flex', alignItems:'center', gap:12 }}>
-        <button onClick={() => navigate('/reservas')}
-          style={{ background:'transparent', border:'1px solid #D6EDE5', color:'#6B9080', padding:'6px 12px', borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:12 }}>
+        <button onClick={() => { cerrarEscaneo(); navigate('/reservas'); }}
+          style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer' }}>
           ← Volver
         </button>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Cobrar cita</div>
-        <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:8, padding:'4px 12px', fontSize:12, color:'#92400E', fontWeight:600 }}>
-          ⚠️ No cierres esta pantalla hasta completar el cobro
-        </div>
       </div>
 
-      <div style={{ padding:32, display:'grid', gridTemplateColumns:'1fr 380px', gap:24 }}>
+      <div style={{ padding:pad, display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:20, flex:1 }}>
 
-        {/* LEFT */}
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        {/* Columna izquierda */}
+        <div style={{ flex:1, display:'flex', flexDirection:'column', gap:14 }}>
 
-          {/* Resumen cita */}
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-            <div style={{ padding:'16px 20px', borderBottom:'1px solid #EAF5EF', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>Resumen de la cita</div>
-              <span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:'#E8F7F2', color:'#063D2A' }}>
-                {reserva.fecha} · {reserva.hora_inicio?.slice(0,5)}
-              </span>
+          {/* Info reserva */}
+          <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:12, padding:'14px 16px' }}>
+            <div style={{ fontSize:14, fontWeight:700, color:'#063D2A', marginBottom:4 }}>
+              {reserva.clientes?.nombre || 'Cliente'}
             </div>
-            <div style={{ padding:'16px 20px', display:'flex', alignItems:'center', gap:14 }}>
-              <div style={{ width:44, height:44, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'#fff', flexShrink:0 }}>
-                {reserva.clientes?.nombre?.[0]?.toUpperCase() || '?'}
-              </div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>{reserva.clientes?.nombre || 'Cliente'}</div>
-                <div style={{ fontSize:12, color:'#6B9080', marginTop:2 }}>{reserva.clientes?.email} · {reserva.clientes?.telefono}</div>
-              </div>
-              <div style={{ textAlign:'right' }}>
-                <div style={{ fontSize:11, color:'#6B9080' }}>Empleado</div>
-                <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>{reserva.empleados?.nombre || '—'}</div>
-              </div>
-            </div>
-
-            {/* Servicio */}
-            <div style={{ borderTop:'1px solid #EAF5EF', padding:'14px 20px' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div>
-                  <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{reserva.servicios?.nombre || 'Servicio'}</div>
-                  <div style={{ fontSize:11.5, color:'#6B9080', marginTop:2 }}>{reserva.servicios?.duracion} min</div>
-                </div>
-                <div style={{ fontSize:16, fontWeight:700, fontFamily:'DM Mono, monospace' }}>
-                  {precioServicio.toFixed(2)} EUR
-                </div>
-              </div>
+            <div style={{ fontSize:12.5, color:'#0A9E6E' }}>
+              {reserva.servicios?.nombre || '—'} · {reserva.fecha} · {reserva.hora_inicio?.slice(0,5)}
+              {reserva.empleados && ` · ${reserva.empleados.nombre}`}
             </div>
           </div>
 
-          {/* Productos vendidos */}
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-            <div style={{ padding:'16px 20px', borderBottom:'1px solid #EAF5EF', fontSize:14, fontWeight:700, color:'#0B1E16' }}>
-              Productos vendidos <span style={{ fontSize:12, color:'#6B9080', fontWeight:400 }}>(opcional)</span>
-            </div>
-            <div style={{ padding:'14px 20px' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 120px 80px', gap:8, marginBottom:10 }}>
-                <input value={productoForm.nombre} onChange={e => setProductoForm({ ...productoForm, nombre: e.target.value })}
-                  placeholder="Nombre del producto"
-                  style={{ padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none' }}/>
-                <input type="number" value={productoForm.precio} onChange={e => setProductoForm({ ...productoForm, precio: e.target.value })}
-                  placeholder="Precio"
-                  style={{ padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, fontFamily:'DM Mono, monospace', outline:'none' }}/>
-                <button onClick={añadirProducto}
-                  style={{ background:'#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                  + Añadir
-                </button>
-              </div>
-              {productosVendidos.map((p, i) => (
-                <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px', background:'#F4FAF7', borderRadius:8, marginBottom:6 }}>
-                  <span style={{ fontSize:13, color:'#0B1E16' }}>{p.nombre}</span>
-                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <span style={{ fontSize:13, fontFamily:'DM Mono, monospace', fontWeight:600 }}>{parseFloat(p.precio).toFixed(2)} EUR</span>
-                    <button onClick={() => setProductosVendidos(productosVendidos.filter((_, j) => j !== i))}
-                      style={{ background:'transparent', border:'none', color:'#EF4444', cursor:'pointer', fontSize:14 }}>✕</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Añadir productos */}
+          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:16 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:12 }}>Añadir productos</div>
 
-          {/* Descuento y nota */}
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-            <div>
-              <div style={{ fontSize:12, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:6 }}>Descuento (EUR)</div>
-              <input type="number" value={descuento} onChange={e => setDescuento(Math.max(0, parseFloat(e.target.value) || 0))}
-                min="0" max={subtotal}
-                placeholder="0"
-                style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, fontFamily:'DM Mono, monospace', outline:'none' }}/>
-            </div>
-            <div>
-              <div style={{ fontSize:12, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:6 }}>Nota interna</div>
-              <textarea value={notaTPV} onChange={e => setNotaTPV(e.target.value)}
-                placeholder="Ej: Se aplicó tratamiento extra. Cliente muy satisfecho..."
-                style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none', minHeight:70, resize:'vertical' }}/>
-            </div>
-          </div>
-
-        </div>
-
-        {/* RIGHT — Cobro */}
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-
-          {/* Total */}
-          <div style={{ background:'#063D2A', borderRadius:14, overflow:'hidden' }}>
-            <div style={{ padding:'24px 20px', textAlign:'center' }}>
-              <div style={{ fontSize:11, color:'#ffffff60', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', marginBottom:8 }}>Total a cobrar</div>
-              <div style={{ fontSize:48, fontWeight:700, color:'#fff', fontFamily:'DM Mono, monospace', letterSpacing:-2, lineHeight:1 }}>
-                {total.toFixed(2)}
-              </div>
-              <div style={{ fontSize:14, color:'#ffffff60', marginTop:4 }}>EUR · IVA incluido</div>
-            </div>
-            <div style={{ background:'#052E1F', padding:'14px 20px', display:'flex', flexDirection:'column', gap:6 }}>
-              {[
-                { label:'Servicio',    val: precioServicio.toFixed(2) + ' EUR' },
-                { label:'Productos',   val: totalProductos.toFixed(2) + ' EUR' },
-                { label:'Descuento',   val: '-' + descuentoImporte.toFixed(2) + ' EUR', color: descuentoImporte > 0 ? '#EF4444' : '#ffffff40' },
-                { label:'Propina',     val: propina.toFixed(2) + ' EUR', color: propina > 0 ? '#0A9E6E' : '#ffffff40' },
-              ].map(item => (
-                <div key={item.label} style={{ display:'flex', justifyContent:'space-between', fontSize:12.5 }}>
-                  <span style={{ color:'#ffffff60' }}>{item.label}</span>
-                  <span style={{ color: item.color || '#fff', fontFamily:'DM Mono, monospace', fontWeight:600 }}>{item.val}</span>
-                </div>
-              ))}
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, paddingTop:8, borderTop:'1px solid #ffffff15', marginTop:2 }}>
-                <span style={{ color:'#fff', fontWeight:700 }}>TOTAL</span>
-                <span style={{ color:'#0A9E6E', fontFamily:'DM Mono, monospace', fontWeight:700 }}>{total.toFixed(2)} EUR</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Propina */}
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'16px 20px' }}>
-            <div style={{ fontSize:12, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:10 }}>Propina (opcional)</div>
-            <div style={{ display:'flex', gap:8, marginBottom:8 }}>
-              {PROPINAS_RAPIDAS.map(p => (
-                <button key={p} onClick={() => { setPropina(p); setPropinaTxt(p.toString()); }}
-                  style={{ flex:1, padding:'8px', border:`1.5px solid ${propina === p ? '#0A9E6E' : '#D6EDE5'}`, borderRadius:8, background: propina === p ? '#E8F7F2' : 'transparent', color: propina === p ? '#0A9E6E' : '#6B9080', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                  +{p} €
-                </button>
-              ))}
-              <button onClick={() => { setPropina(0); setPropinaTxt(''); }}
-                style={{ flex:1, padding:'8px', border:'1.5px solid #D6EDE5', borderRadius:8, background: propina === 0 ? '#F1F5F9' : 'transparent', color:'#6B9080', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                Sin propina
+            {/* Botones modo escaneo */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12 }}>
+              <button onClick={activarPistola}
+                style={{ padding:'10px 8px', background: modoEscaneo==='pistola' ? '#063D2A' : '#F4FAF7', color: modoEscaneo==='pistola' ? '#fff' : '#6B9080', border:`1px solid ${modoEscaneo==='pistola' ? '#063D2A' : '#D6EDE5'}`, borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+                🔫 Pistola
+              </button>
+              <button onClick={modoEscaneo==='camara' ? cerrarEscaneo : activarCamara}
+                style={{ padding:'10px 8px', background: modoEscaneo==='camara' ? '#0A9E6E' : '#F4FAF7', color: modoEscaneo==='camara' ? '#fff' : '#6B9080', border:`1px solid ${modoEscaneo==='camara' ? '#0A9E6E' : '#D6EDE5'}`, borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+                📷 Cámara
+              </button>
+              <button onClick={() => { cerrarEscaneo(); setShowManual(!showManual); }}
+                style={{ padding:'10px 8px', background: showManual ? '#0A9E6E' : '#F4FAF7', color: showManual ? '#fff' : '#6B9080', border:`1px solid ${showManual ? '#0A9E6E' : '#D6EDE5'}`, borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+                ✏️ Manual
               </button>
             </div>
-            <input type="number" value={propinaTxt} min="0"
-              onChange={e => { const v = Math.max(0, parseFloat(e.target.value) || 0); setPropina(v); setPropinaTxt(e.target.value); }}
-              placeholder="Cantidad personalizada"
-              style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, fontFamily:'DM Mono, monospace', outline:'none' }}/>
+
+            {/* Input pistola */}
+            {modoEscaneo === 'pistola' && (
+              <div style={{ marginBottom:10 }}>
+                <div style={{ fontSize:11.5, color:'#0A9E6E', fontWeight:600, marginBottom:6 }}>
+                  Apunta la pistola al código de barras del producto
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <input ref={codigoRef} value={codigoBarras}
+                    onChange={e => setCodigoBarras(e.target.value)}
+                    onKeyDown={handleEscaneo}
+                    placeholder="Escanea el código — pulsa Enter para confirmar"
+                    style={{ flex:1, padding:'8px 12px', border:'1.5px solid #0A9E6E', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
+                  <button onClick={cerrarEscaneo}
+                    style={{ padding:'8px 12px', background:'transparent', border:'1px solid #D6EDE5', borderRadius:8, color:'#6B9080', cursor:'pointer' }}>✕</button>
+                </div>
+              </div>
+            )}
+
+            {/* Visor cámara */}
+            {modoEscaneo === 'camara' && (
+              <div style={{ marginBottom:10 }}>
+                <div style={{ fontSize:11.5, color:'#0A9E6E', fontWeight:600, marginBottom:6 }}>
+                  Apunta la cámara al código de barras
+                </div>
+                <div style={{ position:'relative', borderRadius:10, overflow:'hidden', background:'#000', aspectRatio:'4/3', maxHeight:260 }}>
+                  <video ref={videoRef} style={{ width:'100%', height:'100%', objectFit:'cover' }} playsInline muted/>
+                  {!camaraActiva && (
+                    <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:13 }}>
+                      Iniciando cámara...
+                    </div>
+                  )}
+                  {/* Guía visual */}
+                  <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+                    <div style={{ width:'60%', height:'30%', border:'2px solid #0A9E6E', borderRadius:8, opacity:0.8 }}/>
+                  </div>
+                </div>
+                <button onClick={cerrarEscaneo}
+                  style={{ width:'100%', marginTop:8, padding:'8px', background:'#FEF2F2', border:'none', borderRadius:8, color:'#EF4444', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                  Detener cámara
+                </button>
+              </div>
+            )}
+
+            {/* Producto manual */}
+            {showManual && (
+              <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap' }}>
+                <input value={productoManual.nombre}
+                  onChange={e=>setProductoManual({...productoManual, nombre:e.target.value})}
+                  placeholder="Nombre del producto"
+                  style={{ flex:2, minWidth:140, padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
+                <input type="number" value={productoManual.precio}
+                  onChange={e=>setProductoManual({...productoManual, precio:e.target.value})}
+                  placeholder="Precio EUR"
+                  style={{ flex:1, minWidth:100, padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
+                <button onClick={añadirManual}
+                  style={{ padding:'8px 16px', background:'#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                  Añadir
+                </button>
+              </div>
+            )}
+
+            {/* Error código */}
+            {errorCodigo && (
+              <div style={{ fontSize:12, color:'#EF4444', padding:'8px 12px', background:'#FEF2F2', borderRadius:8, marginBottom:10 }}>
+                {errorCodigo}
+              </div>
+            )}
+
+            {/* Lista productos del stock */}
+            {!modoEscaneo && !showManual && productos.length > 0 && (
+              <div style={{ maxHeight:220, overflowY:'auto', display:'flex', flexDirection:'column', gap:4 }}>
+                <div style={{ fontSize:11, color:'#A8C4B8', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>Toca para añadir</div>
+                {productos.map(p => (
+                  <div key={p.id} onClick={() => añadirProducto(p)}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 10px', borderRadius:8, cursor:'pointer', border:'1px solid #EAF5EF' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='#E8F7F2'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                  >
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>{p.nombre}</div>
+                      {p.codigo_barras && <div style={{ fontSize:11, color:'#A8C4B8', fontFamily:'DM Mono, monospace' }}>{p.codigo_barras}</div>}
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <span style={{ fontSize:11, color: p.stock_actual > 0 ? '#6B9080' : '#EF4444' }}>
+                        Stock: {p.stock_actual}
+                      </span>
+                      <span style={{ fontSize:13, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace' }}>
+                        {p.precio_venta ? `${p.precio_venta} EUR` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Columna derecha — ticket */}
+        <div style={{ width: isMobile ? '100%' : 340, display:'flex', flexDirection:'column', gap:14 }}>
+
+          {/* Líneas ticket */}
+          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:16, flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:12 }}>Ticket</div>
+            {lineas.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'20px 0', color:'#A8C4B8', fontSize:13 }}>Sin productos añadidos</div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {lineas.map(l => (
+                  <div key={l.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 0', borderBottom:'1px solid #EAF5EF' }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{l.nombre}</div>
+                      <div style={{ fontSize:11, color:'#A8C4B8' }}>
+                        {l.tipo === 'servicio' ? 'Servicio' : l.tipo === 'producto' ? 'Producto · Stock' : 'Manual'}
+                      </div>
+                    </div>
+                    {l.tipo !== 'servicio' && (
+                      <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
+                        <button onClick={() => actualizarCantidad(l.id, (l.cantidad||1)-1)}
+                          style={{ width:22, height:22, border:'1px solid #D6EDE5', borderRadius:4, background:'#F4FAF7', color:'#6B9080', fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          -
+                        </button>
+                        <span style={{ fontSize:13, fontFamily:'DM Mono, monospace', minWidth:20, textAlign:'center' }}>{l.cantidad||1}</span>
+                        <button onClick={() => actualizarCantidad(l.id, (l.cantidad||1)+1)}
+                          style={{ width:22, height:22, border:'1px solid #D6EDE5', borderRadius:4, background:'#F4FAF7', color:'#6B9080', fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          +
+                        </button>
+                      </div>
+                    )}
+                    <div style={{ fontSize:14, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace', minWidth:70, textAlign:'right', flexShrink:0 }}>
+                      {(l.precio||0).toFixed(2)} EUR
+                    </div>
+                    <button onClick={() => eliminarLinea(l.id)}
+                      style={{ background:'transparent', border:'none', color:'#A8C4B8', fontSize:16, cursor:'pointer', padding:'0 2px', flexShrink:0 }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Método de pago */}
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'16px 20px' }}>
-            <div style={{ fontSize:12, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:10 }}>Método de pago</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {METODOS.map(m => (
-                <label key={m.id} onClick={() => setMetodo(m.id)}
-                  style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', border:`1.5px solid ${metodo === m.id ? '#0A9E6E' : '#D6EDE5'}`, borderRadius:10, background: metodo === m.id ? '#E8F7F2' : '#F4FAF7', cursor:'pointer', transition:'all 0.15s' }}>
-                  <span style={{ fontSize:20 }}>{m.emoji}</span>
-                  <span style={{ fontSize:14, fontWeight:600, color:'#0B1E16' }}>{m.label}</span>
-                  {metodo === m.id && <span style={{ marginLeft:'auto', color:'#0A9E6E', fontSize:16 }}>✓</span>}
-                </label>
-              ))}
+          {/* Totales y cobro */}
+          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:16 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+              <span style={{ fontSize:13, color:'#6B9080' }}>Propina (EUR)</span>
+              <input type="number" value={propina} onChange={e=>setPropina(e.target.value)}
+                placeholder="0"
+                style={{ width:90, padding:'6px 10px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace', textAlign:'right' }}/>
             </div>
-          </div>
 
-          {/* Factura */}
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'14px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <div>
-              <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>Enviar factura al cliente</div>
-              <div style={{ fontSize:11.5, color:'#6B9080', marginTop:2 }}>
-                PDF por email a {reserva.clientes?.email || '—'}
+            <div style={{ borderTop:'1px solid #EAF5EF', paddingTop:12, marginBottom:16 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B9080', marginBottom:6 }}>
+                <span>Subtotal</span>
+                <span style={{ fontFamily:'DM Mono, monospace' }}>{subtotal.toFixed(2)} EUR</span>
+              </div>
+              {parseFloat(propina) > 0 && (
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'#6B9080', marginBottom:6 }}>
+                  <span>Propina</span>
+                  <span style={{ fontFamily:'DM Mono, monospace' }}>{parseFloat(propina).toFixed(2)} EUR</span>
+                </div>
+              )}
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:18, fontWeight:700, color:'#0B1E16' }}>
+                <span>Total</span>
+                <span style={{ fontFamily:'DM Mono, monospace', color:'#0A9E6E' }}>{total.toFixed(2)} EUR</span>
               </div>
             </div>
-            <div onClick={() => setEnviarFactura(!enviarFactura)} style={{
-              width:40, height:22, borderRadius:11,
-              background: enviarFactura ? '#0A9E6E' : '#D6EDE5',
-              position:'relative', cursor:'pointer', transition:'background 0.2s', flexShrink:0,
-            }}>
-              <div style={{ position:'absolute', width:16, height:16, borderRadius:'50%', background:'#fff', top:3, left: enviarFactura ? 21 : 3, transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.2)' }}/>
+
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:8 }}>Método de pago</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                {[
+                  { k:'efectivo', label:'💵 Efectivo' },
+                  { k:'tarjeta',  label:'💳 Tarjeta'  },
+                  { k:'bizum',    label:'📱 Bizum'    },
+                ].map(m => (
+                  <button key={m.k} onClick={() => setMetodoPago(m.k)} style={{
+                    padding:'8px 6px', fontSize:12, fontWeight:600,
+                    background: metodoPago===m.k ? '#063D2A' : '#F4FAF7',
+                    color:      metodoPago===m.k ? '#fff'    : '#6B9080',
+                    border:     `1px solid ${metodoPago===m.k ? '#063D2A' : '#D6EDE5'}`,
+                    borderRadius:8, cursor:'pointer',
+                  }}>{m.label}</button>
+                ))}
+              </div>
             </div>
+
+            <button onClick={cobrar} disabled={saving || lineas.length === 0}
+              style={{ width:'100%', padding:'14px', background: saving || lineas.length===0 ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor: saving || lineas.length===0 ? 'not-allowed' : 'pointer' }}>
+              {saving ? 'Procesando...' : `Cobrar ${total.toFixed(2)} EUR`}
+            </button>
           </div>
-
-          {/* Botón cobrar */}
-          <button onClick={cobrar} disabled={procesando || cobrado}
-            style={{
-              width:'100%', padding:'16px',
-              background: procesando ? '#A8C4B8' : '#0A9E6E',
-              color:'#fff', border:'none', borderRadius:12,
-              fontSize:16, fontWeight:700, cursor: procesando ? 'not-allowed' : 'pointer',
-              transition:'background 0.15s',
-              boxShadow: procesando ? 'none' : '0 4px 14px #0A9E6E40',
-            }}>
-            {procesando ? 'Procesando...' : `Cobrar ${total.toFixed(2)} EUR`}
-          </button>
-
-          <div style={{ fontSize:11.5, color:'#A8C4B8', textAlign:'center' }}>
-            Esta acción marcará la reserva como completada y no se puede deshacer
-          </div>
-
         </div>
       </div>
     </div>
