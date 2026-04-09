@@ -3,7 +3,11 @@ import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { pushNotifications } from '../../services/notificacionesPush';
 
+const [permisoNotif, setPermisoNotif] = useState(
+  typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+);
 const AptRow = ({ nombre, servicio, empleado, hora_inicio, hora_fin, estado }) => {
   const colors = {
     confirmada: { bg:'#E8F7F2', border:'#D6EDE5', dot:'#0A9E6E', badge:'#E8F7F2', badgeText:'#063D2A', label:'Confirmada' },
@@ -125,6 +129,20 @@ export default function Dashboard() {
               📅 Ver agenda
             </button>
           )}
+          {permisoNotif !== 'granted' && (
+  <button onClick={async () => {
+    const ok = await pushNotifications.solicitarPermiso();
+    setPermisoNotif(ok ? 'granted' : 'denied');
+  }}
+    style={{ background:'#FFF8E7', color:'#92400E', border:'1px solid #F5E4A0', padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+    🔔 Activar alertas de reservas
+  </button>
+)}
+{permisoNotif === 'granted' && (
+  <span style={{ fontSize:12, color:'#0A9E6E', display:'flex', alignItems:'center', gap:4 }}>
+    🔔 Alertas activas
+  </span>
+)}
           <button onClick={() => navigate('/reservas')}
             style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'8px 14px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
             + Nueva

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { exportarExcel, exportarPDF } from '../../services/exportar';
 
 const formVacio = {
   nombre:'', codigo_barras:'', precio_venta:'', precio_coste:'',
@@ -174,7 +175,16 @@ export default function Stock() {
           </button>
         </div>
       </div>
-
+<div style={{ display:'flex', gap:6 }}>
+  <button onClick={() => exportarExcel.stock(productos, negocio?.nombre)}
+    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+    📊 Excel
+  </button>
+  <button onClick={() => exportarPDF.stock(productos, negocio?.nombre)}
+    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+    📄 PDF
+  </button>
+</div>
       <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:16 }}>
 
         {/* Stats */}

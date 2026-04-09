@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { exportarExcel, exportarPDF } from '../../services/exportar';
 
 const ESTADO_STYLES = {
   confirmada: { bg:'#E8F7F2', color:'#063D2A', label:'Confirmada' },
@@ -294,7 +295,16 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
                   placeholder="Notas internas sobre la reserva..."
                   style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
               </div>
-
+<div style={{ display:'flex', gap:6 }}>
+  <button onClick={() => exportarExcel.reservas(reservas, negocio?.nombre)}
+    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+    📊 Excel
+  </button>
+  <button onClick={() => exportarPDF.reservas(reservas, negocio?.nombre)}
+    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+    📄 PDF
+  </button>
+</div>
             </div>
             <div style={{ display:'flex', gap:8, marginTop:16 }}>
               <button onClick={guardarReserva} disabled={saving}

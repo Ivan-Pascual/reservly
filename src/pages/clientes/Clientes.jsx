@@ -3,6 +3,7 @@ import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { exportarExcel, exportarPDF } from '../../services/exportar';
 
 const TAG_STYLES = {
   vip:      { bg:'#F5F3FF', color:'#8B5CF6', label:'⭐ VIP'  },
@@ -256,7 +257,16 @@ export default function Clientes() {
                 }}>{f.label}</button>
               ))}
             </div>
-
+<div style={{ display:'flex', gap:6 }}>
+  <button onClick={() => exportarExcel.clientes(clientes, negocio?.nombre)}
+    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+    📊 Excel
+  </button>
+  <button onClick={() => exportarPDF.clientes(clientes, negocio?.nombre)}
+    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+    📄 PDF
+  </button>
+</div>
             {/* Edad */}
             <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', flexWrap:'wrap' }}>
               {[

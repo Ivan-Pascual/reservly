@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabase';
+import { pushNotifications } from '../../services/notificacionesPush';
 
 export default function Login() {
   const [modo, setModo] = useState('login');
@@ -12,7 +13,8 @@ export default function Login() {
   const handleSubmit = async () => {
     setError('');
     setLoading(true);
-
+// Solicitar permiso de notificaciones
+pushNotifications.solicitarPermiso();
     if (modo === 'registro') {
       const { error } = await supabase.auth.signUp({
         email,
@@ -117,6 +119,7 @@ export default function Login() {
                 onFocus={e => e.target.style.borderColor = '#0A9E6E'}
                 onBlur={e => e.target.style.borderColor = '#D6EDE5'}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              
               />
             </div>
 

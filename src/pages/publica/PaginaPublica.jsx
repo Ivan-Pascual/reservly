@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { notificaciones } from '../../services/notificaciones';
+import { pushNotifications } from '../../services/notificacionesPush';
 
 const DIAS_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -216,7 +217,13 @@ export default function PaginaPublica() {
           empleado: selEmpleado,
         });
       }
-
+// Notificar al negocio de la nueva reserva
+pushNotifications.nuevaReserva({
+  clienteNombre: datosCliente.nombre,
+  servicio:      selServicio?.nombre || 'Servicio',
+  fecha:         fechaStr,
+  hora:          selHora.hora,
+});
       setReservaId(reserva.id);
       setPaso(6);
     } catch (err) {
