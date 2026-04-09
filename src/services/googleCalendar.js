@@ -17,23 +17,48 @@ export const googleCalendar = {
 
   // Cargar GSI (Google Sign-In)
   cargarGSI: () => {
-    return new Promise((resolve, reject) => {
-      if (window.google?.accounts) { resolve(); return; }
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.body.appendChild(script);
-    });
-  },
-
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.oauth2) { resolve(); return; }
+    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (existing) {
+      // Script ya existe, esperar a que cargue
+      existing.addEventListener('load', resolve);
+      existing.addEventListener('error', reject);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+},
   // Iniciar sesión con Google y obtener token
   conectar: () => {
-    return new Promise((resolve, reject) => {
-      if (!window.google?.accounts) {
-        reject(new Error('Google no cargado'));
-        return;
-      }
+  return new Promise(async (resolve, reject) => {
+    // Asegurar que los scripts están cargados
+    try {
+      await googleCalendar.cargarGSI();
+    } catch {
+      reject(new Error('No se pudo cargar Google'));
+      return;
+    }
+
+    // Esperar a que google.accounts esté disponible
+    let intentos = 0;
+    while (!window.google?.accounts?.oauth2 && intentos < 20) {
+      await new Promise(r => setTimeout(r, 200));
+      intentos++;
+    }
+
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error('Google no disponible'));
+      return;
+    }
+
+    try {
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -42,16 +67,17 @@ export const googleCalendar = {
             reject(new Error(response.error));
             return;
           }
-          // Guardar token en localStorage
           localStorage.setItem('google_calendar_token', response.access_token);
           localStorage.setItem('google_calendar_expiry', Date.now() + (response.expires_in * 1000));
           resolve(response.access_token);
         },
       });
-      client.requestAccessToken();
-    });
-  },
-
+      client.requestAccessToken({ prompt: 'consent' });
+    } catch (err) {
+      reject(err);
+    }
+  });
+},
   // Obtener token guardado si sigue válido
   getToken: () => {
     const token  = localStorage.getItem('google_calendar_token');
