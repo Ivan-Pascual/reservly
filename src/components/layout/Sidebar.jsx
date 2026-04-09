@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import BusquedaGlobal from '../BusquedaGlobal';
 
 function NavItem({ to, emoji, label, badge, onClose }) {
   return (
@@ -27,21 +26,9 @@ function NavItem({ to, emoji, label, badge, onClose }) {
   );
 }
 
-export default function Sidebar({ onClose }) {
+export default function Sidebar({ onClose, onBuscar }) {
   const [negocioNombre, setNegocioNombre] = useState('Mi negocio');
   const [pendientes, setPendientes] = useState(0);
-  const [showBusqueda, setShowBusqueda] = useState(false);
-
-  useEffect(() => {
-    const handleKey = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setShowBusqueda(b => !b);
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,7 +73,7 @@ export default function Sidebar({ onClose }) {
       </div>
 
       {/* Buscador */}
-      <div onClick={() => setShowBusqueda(true)}
+      <div onClick={onBuscar}
         style={{ margin:'0 12px 8px', display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'#ffffff10', cursor:'pointer', border:'1px solid #ffffff15' }}>
         <span style={{ fontSize:14 }}>🔍</span>
         <span style={{ fontSize:13, color:'#ffffff60', flex:1 }}>Buscar...</span>
@@ -143,7 +130,6 @@ export default function Sidebar({ onClose }) {
         }}>Cerrar sesión</button>
       </div>
 
-      {showBusqueda && <BusquedaGlobal onClose={() => setShowBusqueda(false)} />}
     </aside>
   );
 }

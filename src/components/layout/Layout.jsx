@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import BusquedaGlobal from '../BusquedaGlobal';
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showBusqueda, setShowBusqueda] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -13,6 +15,17 @@ export default function Layout({ children }) {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowBusqueda(b => !b);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
   return (
@@ -33,7 +46,10 @@ export default function Layout({ children }) {
         height: '100vh',
         flexShrink: 0,
       }}>
-        <Sidebar onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          onClose={() => setSidebarOpen(false)}
+          onBuscar={() => setShowBusqueda(true)}
+        />
       </div>
 
       {/* Main */}
@@ -57,15 +73,23 @@ export default function Layout({ children }) {
               </svg>
               <span style={{ fontSize:15, fontWeight:700, color:'#fff' }}>Reservly</span>
             </div>
+            {/* Botón buscar en móvil */}
+            <button onClick={() => setShowBusqueda(true)}
+              style={{ marginLeft:'auto', background:'#ffffff15', border:'none', borderRadius:8, padding:'6px 10px', color:'#fff', fontSize:14, cursor:'pointer' }}>
+              🔍
+            </button>
           </div>
         )}
 
-        {/* Wrapper con scroll horizontal en móvil para tablas */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
           {children}
         </div>
 
       </main>
+
+      {/* Búsqueda global */}
+      {showBusqueda && <BusquedaGlobal onClose={() => setShowBusqueda(false)} />}
+
     </div>
   );
 }
