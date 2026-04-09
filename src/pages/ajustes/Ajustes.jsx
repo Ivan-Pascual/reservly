@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { slugificar } from '../../utils/helpers';
-
+import { generarBackup } from '../../services/backup';
 const Toggle = ({ on, onChange }) => (
-  <div onClick={() => onChange(!on)} style={{
+  <div onClick={() => onChange(!on)} style={{ 
     width: 40, height: 22, borderRadius: 11,
     background: on ? '#0A9E6E' : '#D6EDE5',
     position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
@@ -23,7 +23,8 @@ export default function Ajustes() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-
+const [generandoBackup, setGenerandoBackup] = useState(false);
+const [backupOk, setBackupOk] = useState(null);
   const [info, setInfo] = useState({
     nombre: '', telefono: '', email: '', direccion: '', slug: '',
   });
@@ -230,6 +231,45 @@ export default function Ajustes() {
                     onFocus={e => e.target.style.borderColor = '#0A9E6E'}
                     onBlur={e => e.target.style.borderColor = '#D6EDE5'}/>
                 )}
+                {/* Backup de datos */}
+<div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
+  <div style={{ padding:'14px 18px', borderBottom:'1px solid #EAF5EF', fontSize:13, fontWeight:700, color:'#0B1E16' }}>
+    Copia de seguridad
+  </div>
+  <div style={{ padding:'16px 18px' }}>
+    <div style={{ fontSize:13, color:'#6B9080', lineHeight:1.6, marginBottom:14 }}>
+      Descarga todos tus datos en un archivo JSON — clientes, reservas, servicios, empleados y stock. Guárdalo en un lugar seguro.
+    </div>
+    <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+      <button onClick={async () => {
+        setGenerandoBackup(true);
+        setBackupOk(null);
+        const result = await generarBackup(negocio.id, negocio.nombre);
+        setBackupOk(result.ok);
+        setGenerandoBackup(false);
+        if (result.ok) {
+          setTimeout(() => setBackupOk(null), 4000);
+        }
+      }} disabled={generandoBackup}
+        style={{ flex:1, padding:'10px', background: generandoBackup ? '#A8C4B8' : '#063D2A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor: generandoBackup ? 'not-allowed' : 'pointer' }}>
+        {generandoBackup ? 'Generando backup...' : '⬇️ Descargar backup completo'}
+      </button>
+    </div>
+    {backupOk === true && (
+      <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:8, padding:'8px 12px', fontSize:12.5, color:'#063D2A', fontWeight:600 }}>
+        ✓ Backup descargado correctamente
+      </div>
+    )}
+    {backupOk === false && (
+      <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'8px 12px', fontSize:12.5, color:'#EF4444' }}>
+        Error al generar el backup. Inténtalo de nuevo.
+      </div>
+    )}
+    <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:10, lineHeight:1.5 }}>
+      Se recomienda hacer una copia mensual. El archivo incluye todos tus datos en formato JSON estándar.
+    </div>
+  </div>
+</div>
               </div>
             ))}
             <div style={{ height: 12 }}/>
@@ -294,8 +334,7 @@ export default function Ajustes() {
             </div>
             <div style={{ height: 4 }}/>
           </Section>
-
-          <Section title="Plan y suscripción">
+<Section title="Plan y suscripción">
             <div style={{ padding: '14px 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div>
@@ -309,8 +348,39 @@ export default function Ajustes() {
               </button>
             </div>
           </Section>
-        </div>
 
+          <Section title="Copia de seguridad">
+            <div style={{ padding: '14px 0' }}>
+              <div style={{ fontSize: 13, color: '#6B9080', lineHeight: 1.6, marginBottom: 14 }}>
+                Descarga todos tus datos — clientes, reservas, servicios, empleados y stock — en un archivo JSON. Guárdalo en un lugar seguro.
+              </div>
+              <button onClick={async () => {
+                setGenerandoBackup(true);
+                setBackupOk(null);
+                const result = await generarBackup(negocio.id, negocio.nombre);
+                setBackupOk(result.ok);
+                setGenerandoBackup(false);
+                if (result.ok) setTimeout(() => setBackupOk(null), 4000);
+              }} disabled={generandoBackup}
+                style={{ width:'100%', padding:'10px', background: generandoBackup ? '#A8C4B8' : '#063D2A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor: generandoBackup ? 'not-allowed' : 'pointer', marginBottom:10 }}>
+                {generandoBackup ? 'Generando backup...' : '⬇️ Descargar backup completo'}
+              </button>
+              {backupOk === true && (
+                <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:8, padding:'8px 12px', fontSize:12.5, color:'#063D2A', fontWeight:600 }}>
+                  ✓ Backup descargado correctamente
+                </div>
+              )}
+              {backupOk === false && (
+                <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'8px 12px', fontSize:12.5, color:'#EF4444' }}>
+                  Error al generar el backup. Inténtalo de nuevo.
+                </div>
+              )}
+              <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:10, lineHeight:1.5 }}>
+                Se recomienda hacer una copia mensual. El archivo incluye todos tus datos en formato JSON estándar.
+              </div>
+            </div>
+          </Section>
+        </div>
         {/* Col derecha */}
         <div>
           <Section title="Notificaciones">
