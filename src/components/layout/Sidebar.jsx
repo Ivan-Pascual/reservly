@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import { useState, useEffect } from 'react';
 import BusquedaGlobal from '../BusquedaGlobal';
 
 function NavItem({ to, emoji, label, badge, onClose }) {
   return (
-    <NavLink
-      to={to}
-      onClick={onClose}
+    <NavLink to={to} onClick={onClose}
       style={({ isActive }) => ({
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 12px', borderRadius: 8,
@@ -33,18 +30,18 @@ function NavItem({ to, emoji, label, badge, onClose }) {
 export default function Sidebar({ onClose }) {
   const [negocioNombre, setNegocioNombre] = useState('Mi negocio');
   const [pendientes, setPendientes] = useState(0);
-const [showBusqueda, setShowBusqueda] = useState(false);
+  const [showBusqueda, setShowBusqueda] = useState(false);
 
-useEffect(() => {
-  const handleKey = (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      setShowBusqueda(b => !b);
-    }
-  };
-  window.addEventListener('keydown', handleKey);
-  return () => window.removeEventListener('keydown', handleKey);
-}, []);
+  useEffect(() => {
+    const handleKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowBusqueda(b => !b);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,6 +85,14 @@ useEffect(() => {
         <span style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Reservly</span>
       </div>
 
+      {/* Buscador */}
+      <div onClick={() => setShowBusqueda(true)}
+        style={{ margin:'0 12px 8px', display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'#ffffff10', cursor:'pointer', border:'1px solid #ffffff15' }}>
+        <span style={{ fontSize:14 }}>🔍</span>
+        <span style={{ fontSize:13, color:'#ffffff60', flex:1 }}>Buscar...</span>
+        <kbd style={{ fontSize:10, color:'#ffffff40', background:'#ffffff10', border:'1px solid #ffffff20', borderRadius:4, padding:'2px 5px' }}>⌘K</kbd>
+      </div>
+
       {/* Nav */}
       <div style={{ padding: '0 12px', flex: 1, overflowY: 'auto' }}>
 
@@ -101,18 +106,19 @@ useEffect(() => {
         <NavItem to="/clientes"   emoji="👤"  label="Clientes"          onClose={cerrarSidebar} />
         <NavItem to="/empleados"  emoji="👥"  label="Empleados"         onClose={cerrarSidebar} />
         <NavItem to="/servicios"  emoji="✂️"  label="Servicios"         onClose={cerrarSidebar} />
-        <NavItem to="/stock" emoji="📦" label="Stock" onClose={cerrarSidebar} />
+        <NavItem to="/stock"      emoji="📦"  label="Stock"             onClose={cerrarSidebar} />
+
         <div style={{ height: 1, background: '#ffffff10', margin: '12px 0' }} />
 
         <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', color: '#ffffff40', textTransform: 'uppercase', padding: '8px 12px 6px' }}>
           Gestión
         </div>
 
-        <NavItem to="/comisiones"   emoji="⏱"  label="Comisiones"        onClose={cerrarSidebar} />
-        <NavItem to="/vacaciones"   emoji="🏖️" label="Vacaciones"         onClose={cerrarSidebar} />
-        <NavItem to="/bonos"        emoji="🎁"  label="Bonos y descuentos" onClose={cerrarSidebar} />
-        <NavItem to="/valoraciones" emoji="⭐"  label="Valoraciones"       onClose={cerrarSidebar} />
-        <NavItem to="/estadisticas" emoji="📈"  label="Estadísticas"       onClose={cerrarSidebar} />
+        <NavItem to="/comisiones"   emoji="⏱"  label="Comisiones"         onClose={cerrarSidebar} />
+        <NavItem to="/vacaciones"   emoji="🏖️" label="Vacaciones"          onClose={cerrarSidebar} />
+        <NavItem to="/bonos"        emoji="🎁"  label="Bonos y descuentos"  onClose={cerrarSidebar} />
+        <NavItem to="/valoraciones" emoji="⭐"  label="Valoraciones"        onClose={cerrarSidebar} />
+        <NavItem to="/estadisticas" emoji="📈"  label="Estadísticas"        onClose={cerrarSidebar} />
 
         <div style={{ height: 1, background: '#ffffff10', margin: '12px 0' }} />
 
@@ -136,15 +142,8 @@ useEffect(() => {
           fontSize: 12, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
         }}>Cerrar sesión</button>
       </div>
-{/* Botón búsqueda en el sidebar */}
-<div onClick={() => setShowBusqueda(true)}
-  style={{ margin:'0 12px 8px', display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'#ffffff10', cursor:'pointer', border:'1px solid #ffffff15' }}>
-  <span style={{ fontSize:14 }}>🔍</span>
-  <span style={{ fontSize:13, color:'#ffffff60', flex:1 }}>Buscar...</span>
-  <kbd style={{ fontSize:10, color:'#ffffff40', background:'#ffffff10', border:'1px solid #ffffff20', borderRadius:4, padding:'2px 5px' }}>⌘K</kbd>
-</div>
 
-{showBusqueda && <BusquedaGlobal onClose={() => setShowBusqueda(false)} />}
+      {showBusqueda && <BusquedaGlobal onClose={() => setShowBusqueda(false)} />}
     </aside>
   );
 }
