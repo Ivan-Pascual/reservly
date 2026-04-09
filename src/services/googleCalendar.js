@@ -1,4 +1,4 @@
-const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+const CLIENT_ID = '806933008100-u1lek0j115atr3v965o7o6q1gkfnsnel.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
 
 export const googleCalendar = {
