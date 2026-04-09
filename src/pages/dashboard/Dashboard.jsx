@@ -5,9 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { pushNotifications } from '../../services/notificacionesPush';
 
-const [permisoNotif, setPermisoNotif] = useState(
-  typeof Notification !== 'undefined' ? Notification.permission : 'denied'
-);
 const AptRow = ({ nombre, servicio, empleado, hora_inicio, hora_fin, estado }) => {
   const colors = {
     confirmada: { bg:'#E8F7F2', border:'#D6EDE5', dot:'#0A9E6E', badge:'#E8F7F2', badgeText:'#063D2A', label:'Confirmada' },
@@ -41,7 +38,9 @@ export default function Dashboard() {
   });
   const [empleados, setEmpleados] = useState([]);
   const [cargando, setCargando] = useState(true);
-
+const [permisoNotif, setPermisoNotif] = useState(
+  typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+);
   useEffect(() => {
     if (!negocio) return;
     fetchData();
@@ -104,8 +103,8 @@ export default function Dashboard() {
     </div>
   );
 
-  const hoyStr = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  const nombreNegocio = negocio?.nombre || 'tu negocio';
+const hoyStrRaw = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const nombreNegocio = negocio?.nombre || 'tu negocio';
   const slug = negocio?.slug || '';
   const hora = new Date().getHours();
   const saludo = hora < 12 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
