@@ -3,8 +3,10 @@ import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { slugificar } from '../../utils/helpers';
 import { generarBackup } from '../../services/backup';
+import { googleCalendar } from '../../services/googleCalendar';
+
 const Toggle = ({ on, onChange }) => (
-  <div onClick={() => onChange(!on)} style={{ 
+  <div onClick={() => onChange(!on)} style={{
     width: 40, height: 22, borderRadius: 11,
     background: on ? '#0A9E6E' : '#D6EDE5',
     position: 'relative', cursor: 'pointer', transition: 'background 0.2s', flexShrink: 0,
@@ -17,14 +19,18 @@ const Toggle = ({ on, onChange }) => (
   </div>
 );
 
-
 export default function Ajustes() {
   const { negocio, loading: negocioLoading } = useNegocio();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-const [generandoBackup, setGenerandoBackup] = useState(false);
-const [backupOk, setBackupOk] = useState(null);
+  const [generandoBackup, setGenerandoBackup] = useState(false);
+  const [backupOk, setBackupOk] = useState(null);
+  const [googleConectado, setGoogleConectado] = useState(false);
+  const [googleCargando, setGoogleCargando] = useState(false);
+  const [googleMsg, setGoogleMsg] = useState('');
+  const [sincronizando, setSincronizando] = useState(false);
+
   const [info, setInfo] = useState({
     nombre: '', telefono: '', email: '', direccion: '', slug: '',
   });
@@ -53,7 +59,13 @@ const [backupOk, setBackupOk] = useState(null);
   useEffect(() => {
     if (!negocio) return;
     fetchData();
-  }, [negocio]);
+    const token = googleCalendar.getToken();
+    setGoogleConectado(!!token);
+    Promise.all([
+      googleCalendar.cargarScript(),
+      googleCalendar.cargarGSI(),
+    ]).catch(() => {});
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     setInfo({
@@ -205,7 +217,7 @@ const [backupOk, setBackupOk] = useState(null);
 
       <div style={{ padding: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
-        {/* Col izquierda */}
+        {/* ── Col izquierda ── */}
         <div>
           <Section title="Información del negocio">
             {[
@@ -231,45 +243,6 @@ const [backupOk, setBackupOk] = useState(null);
                     onFocus={e => e.target.style.borderColor = '#0A9E6E'}
                     onBlur={e => e.target.style.borderColor = '#D6EDE5'}/>
                 )}
-                {/* Backup de datos */}
-<div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-  <div style={{ padding:'14px 18px', borderBottom:'1px solid #EAF5EF', fontSize:13, fontWeight:700, color:'#0B1E16' }}>
-    Copia de seguridad
-  </div>
-  <div style={{ padding:'16px 18px' }}>
-    <div style={{ fontSize:13, color:'#6B9080', lineHeight:1.6, marginBottom:14 }}>
-      Descarga todos tus datos en un archivo JSON — clientes, reservas, servicios, empleados y stock. Guárdalo en un lugar seguro.
-    </div>
-    <div style={{ display:'flex', gap:8, marginBottom:10 }}>
-      <button onClick={async () => {
-        setGenerandoBackup(true);
-        setBackupOk(null);
-        const result = await generarBackup(negocio.id, negocio.nombre);
-        setBackupOk(result.ok);
-        setGenerandoBackup(false);
-        if (result.ok) {
-          setTimeout(() => setBackupOk(null), 4000);
-        }
-      }} disabled={generandoBackup}
-        style={{ flex:1, padding:'10px', background: generandoBackup ? '#A8C4B8' : '#063D2A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor: generandoBackup ? 'not-allowed' : 'pointer' }}>
-        {generandoBackup ? 'Generando backup...' : '⬇️ Descargar backup completo'}
-      </button>
-    </div>
-    {backupOk === true && (
-      <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:8, padding:'8px 12px', fontSize:12.5, color:'#063D2A', fontWeight:600 }}>
-        ✓ Backup descargado correctamente
-      </div>
-    )}
-    {backupOk === false && (
-      <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'8px 12px', fontSize:12.5, color:'#EF4444' }}>
-        Error al generar el backup. Inténtalo de nuevo.
-      </div>
-    )}
-    <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:10, lineHeight:1.5 }}>
-      Se recomienda hacer una copia mensual. El archivo incluye todos tus datos en formato JSON estándar.
-    </div>
-  </div>
-</div>
               </div>
             ))}
             <div style={{ height: 12 }}/>
@@ -334,7 +307,8 @@ const [backupOk, setBackupOk] = useState(null);
             </div>
             <div style={{ height: 4 }}/>
           </Section>
-<Section title="Plan y suscripción">
+
+          <Section title="Plan y suscripción">
             <div style={{ padding: '14px 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div>
@@ -381,7 +355,8 @@ const [backupOk, setBackupOk] = useState(null);
             </div>
           </Section>
         </div>
-        {/* Col derecha */}
+
+        {/* ── Col derecha ── */}
         <div>
           <Section title="Notificaciones">
             <Row title="Email al cliente al reservar" desc="Confirmación automática por email">
@@ -452,8 +427,92 @@ const [backupOk, setBackupOk] = useState(null);
             )}
             <div style={{ height: 4 }}/>
           </Section>
-        </div>
 
+          <Section title="Google Calendar">
+            <div style={{ padding:'14px 0' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
+                <div style={{ width:36, height:36, borderRadius:8, background:'#fff', border:'1px solid #D6EDE5', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
+                  📅
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16' }}>Sincronizar con Google Calendar</div>
+                  <div style={{ fontSize:11.5, color:'#6B9080' }}>Las reservas aparecerán automáticamente en tu calendario</div>
+                </div>
+                {googleConectado ? (
+                  <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#E8F7F2', color:'#063D2A', flexShrink:0 }}>● Conectado</span>
+                ) : (
+                  <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#F1F5F9', color:'#6B9080', flexShrink:0 }}>○ Desconectado</span>
+                )}
+              </div>
+
+              {!googleConectado ? (
+                <button onClick={async () => {
+                  setGoogleCargando(true);
+                  setGoogleMsg('');
+                  try {
+                    await Promise.all([
+                      googleCalendar.cargarScript(),
+                      googleCalendar.cargarGSI(),
+                    ]);
+                    await googleCalendar.conectar();
+                    setGoogleConectado(true);
+                    setGoogleMsg('✓ Conectado correctamente');
+                    setTimeout(() => setGoogleMsg(''), 3000);
+                  } catch (err) {
+                    setGoogleMsg('Error al conectar. Inténtalo de nuevo.');
+                  }
+                  setGoogleCargando(false);
+                }} disabled={googleCargando}
+                  style={{ width:'100%', padding:'10px', background: googleCargando ? '#A8C4B8' : '#4285F4', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor: googleCargando ? 'not-allowed' : 'pointer', marginBottom:8 }}>
+                  {googleCargando ? 'Conectando...' : '🔗 Conectar con Google Calendar'}
+                </button>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  <button onClick={async () => {
+                    setSincronizando(true);
+                    setGoogleMsg('');
+                    try {
+                      const { data: reservas } = await supabase
+                        .from('reservas').select('*, clientes(nombre), servicios(nombre), empleados(nombre)')
+                        .eq('negocio_id', negocio.id)
+                        .in('estado', ['confirmada','pendiente'])
+                        .gte('fecha', new Date().toISOString().split('T')[0]);
+                      const resultado = await googleCalendar.sincronizarTodas(reservas || []);
+                      setGoogleMsg(`✓ ${resultado.ok} reservas sincronizadas${resultado.error > 0 ? ` (${resultado.error} errores)` : ''}`);
+                      setTimeout(() => setGoogleMsg(''), 5000);
+                    } catch (err) {
+                      setGoogleMsg('Error al sincronizar: ' + err.message);
+                    }
+                    setSincronizando(false);
+                  }} disabled={sincronizando}
+                    style={{ width:'100%', padding:'10px', background: sincronizando ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor: sincronizando ? 'not-allowed' : 'pointer' }}>
+                    {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar reservas futuras'}
+                  </button>
+                  <button onClick={() => {
+                    googleCalendar.desconectar();
+                    setGoogleConectado(false);
+                    setGoogleMsg('Desconectado de Google Calendar');
+                    setTimeout(() => setGoogleMsg(''), 3000);
+                  }}
+                    style={{ width:'100%', padding:'8px', background:'transparent', color:'#EF4444', border:'1px solid #FECACA', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    Desconectar Google Calendar
+                  </button>
+                </div>
+              )}
+
+              {googleMsg && (
+                <div style={{ marginTop:10, padding:'8px 12px', background: googleMsg.startsWith('✓') ? '#E8F7F2' : '#FEF2F2', border:`1px solid ${googleMsg.startsWith('✓') ? '#D6EDE5' : '#FECACA'}`, borderRadius:8, fontSize:12.5, color: googleMsg.startsWith('✓') ? '#063D2A' : '#EF4444', fontWeight:600 }}>
+                  {googleMsg}
+                </div>
+              )}
+
+              <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:10, lineHeight:1.5 }}>
+                Solo sincroniza reservas futuras confirmadas y pendientes. No modifica eventos ya existentes en tu calendario.
+              </div>
+            </div>
+          </Section>
+
+        </div>
       </div>
     </div>
   );
