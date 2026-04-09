@@ -21,6 +21,9 @@ import Agenda from './pages/agenda/Agenda';
 import PaginaPublica from './pages/publica/PaginaPublica';
 import ErrorBoundary from './components/ErrorBoundary';
 import Stock from './pages/stock/Stock';
+import HistorialStock from './pages/stock/HistorialStock';
+import Demo from './pages/demo/Demo';
+
 
 const TITULOS = {
   '/dashboard':    'Inicio',
@@ -92,47 +95,49 @@ export default function App() {
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
     </div>
   );
-
   return (
+
     <ErrorBoundary>
       <BrowserRouter>
         <TituloManager />
+<Routes>
+
+  {/* Rutas públicas — sin login */}
+  <Route path="/reservar/:slug" element={<PaginaPublica />} />
+  <Route path="/demo" element={<Demo />} />
+
+  {/* Rutas privadas */}
+  <Route path="/*" element={
+    !session ? <Login /> :
+    (negocio && !negocio.onboarding_completado) ? (
+      <Onboarding negocioId={negocio.id} onComplete={() => fetchNegocio(session.user.id)} />
+    ) : (
+      <Layout>
         <Routes>
-
-          {/* Página pública sin login */}
-          <Route path="/reservar/:slug" element={<PaginaPublica />} />
-
-          {/* Rutas privadas */}
-          <Route path="/*" element={
-            !session ? <Login /> :
-            (negocio && !negocio.onboarding_completado) ? (
-              <Onboarding negocioId={negocio.id} onComplete={() => fetchNegocio(session.user.id)} />
-            ) : (
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard"      element={<Dashboard />} />
-                  <Route path="/reservas"       element={<Reservas />} />
-                  <Route path="/agenda"         element={<Agenda />} />
-                  <Route path="/clientes"       element={<Clientes />} />
-                  <Route path="/clientes/:id"   element={<FichaCliente />} />
-                  <Route path="/empleados"      element={<Empleados />} />
-                  <Route path="/servicios"      element={<Servicios />} />
-                  <Route path="/comisiones"     element={<Comisiones />} />
-                  <Route path="/bonos"          element={<Bonos />} />
-                  <Route path="/valoraciones"   element={<Valoraciones />} />
-                  <Route path="/estadisticas"   element={<Estadisticas />} />
-                  <Route path="/ajustes"        element={<Ajustes />} />
-                  <Route path="/vacaciones"     element={<Vacaciones />} />
-                  <Route path="/stock" element={<Stock />} />
-                  <Route path="/tpv/:reservaId" element={<TPV />} />
-                  <Route path="*"               element={<NotFound />} />
-                </Routes>
-              </Layout>
-            )
-          } />
-
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard"      element={<Dashboard />} />
+          <Route path="/reservas"       element={<Reservas />} />
+          <Route path="/agenda"         element={<Agenda />} />
+          <Route path="/clientes"       element={<Clientes />} />
+          <Route path="/clientes/:id"   element={<FichaCliente />} />
+          <Route path="/empleados"      element={<Empleados />} />
+          <Route path="/servicios"      element={<Servicios />} />
+          <Route path="/comisiones"     element={<Comisiones />} />
+          <Route path="/bonos"          element={<Bonos />} />
+          <Route path="/valoraciones"   element={<Valoraciones />} />
+          <Route path="/estadisticas"   element={<Estadisticas />} />
+          <Route path="/ajustes"        element={<Ajustes />} />
+          <Route path="/vacaciones"     element={<Vacaciones />} />
+          <Route path="/stock"          element={<Stock />} />
+          <Route path="/tpv/:reservaId" element={<TPV />} />
+          <Route path="/stock/:id/historial" element={<HistorialStock />} />
+          <Route path="*"               element={<NotFound />} />
         </Routes>
+      </Layout>
+    )
+  } />
+
+</Routes>
       </BrowserRouter>
     </ErrorBoundary>
   );

@@ -130,8 +130,7 @@ export default function BusquedaGlobal({ onClose }) {
   ];
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'flex-start', justifyContent:'center', paddingTop:60 }}
-      onClick={onClose}>
+<div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:99999, display:'flex', alignItems:'flex-start', justifyContent:'center', paddingTop:60 }}      onClick={onClose}>
       <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:560, overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}
         onClick={e=>e.stopPropagation()}>
 

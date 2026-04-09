@@ -4,11 +4,124 @@ import { supabase } from '../../supabase';
 import { notificaciones } from '../../services/notificaciones';
 import { pushNotifications } from '../../services/notificacionesPush';
 
-const DIAS_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const TEXTOS = {
+  es: {
+    reservar:           'Reserva tu cita',
+    elegirServicio:     'Elige el servicio que necesitas',
+    conQuien:           '¿Con quién quieres la cita?',
+    sinPreferencia:     'Sin preferencia',
+    sinPreferenciaDesc: 'Te asignamos el profesional disponible',
+    queDia:             '¿Qué día te viene bien?',
+    proximos30:         'Próximos 30 días disponibles',
+    aQueHora:           '¿A qué hora?',
+    tusDatos:           'Tus datos',
+    paraConfirmar:      'Para confirmar tu reserva necesitamos tus datos',
+    nombre:             'Nombre completo *',
+    telefono:           'Teléfono *',
+    email:              'Email (opcional)',
+    confirmar:          'Confirmar reserva',
+    confirmando:        'Confirmando...',
+    confirmada:         '¡Reserva confirmada!',
+    confirmadaDesc:     'Hemos recibido tu reserva en',
+    otraReserva:        'Hacer otra reserva',
+    sinHuecos:          'No hay huecos disponibles',
+    sinHuecosDesc:      'Prueba con otro día',
+    elegirOtroDia:      'Elegir otro día',
+    sinDias:            'No hay días disponibles',
+    sinDiasDesc:        'Contacta directamente con el negocio',
+    gestionado:         'Reservas gestionadas por',
+    servicio:           'Servicio',
+    profesional:        'Profesional',
+    fecha:              'Fecha',
+    hora:               'Hora',
+    resumen:            'Resumen de tu cita',
+    volver:             '← Volver',
+  },
+  en: {
+    reservar:           'Book your appointment',
+    elegirServicio:     'Choose the service you need',
+    conQuien:           'Who would you like your appointment with?',
+    sinPreferencia:     'No preference',
+    sinPreferenciaDesc: 'We will assign an available professional',
+    queDia:             'What day works for you?',
+    proximos30:         'Next 30 available days',
+    aQueHora:           'What time?',
+    tusDatos:           'Your details',
+    paraConfirmar:      'We need your details to confirm your booking',
+    nombre:             'Full name *',
+    telefono:           'Phone *',
+    email:              'Email (optional)',
+    confirmar:          'Confirm booking',
+    confirmando:        'Confirming...',
+    confirmada:         'Booking confirmed!',
+    confirmadaDesc:     'We have received your booking at',
+    otraReserva:        'Book another appointment',
+    sinHuecos:          'No available slots',
+    sinHuecosDesc:      'Try another day',
+    elegirOtroDia:      'Choose another day',
+    sinDias:            'No available days',
+    sinDiasDesc:        'Contact the business directly',
+    gestionado:         'Bookings powered by',
+    servicio:           'Service',
+    profesional:        'Professional',
+    fecha:              'Date',
+    hora:               'Time',
+    resumen:            'Booking summary',
+    volver:             '← Back',
+  },
+  fr: {
+    reservar:           'Réserver votre rendez-vous',
+    elegirServicio:     'Choisissez le service dont vous avez besoin',
+    conQuien:           'Avec qui souhaitez-vous votre rendez-vous?',
+    sinPreferencia:     'Sans préférence',
+    sinPreferenciaDesc: 'Nous vous assignerons un professionnel disponible',
+    queDia:             'Quel jour vous convient?',
+    proximos30:         '30 prochains jours disponibles',
+    aQueHora:           'À quelle heure?',
+    tusDatos:           'Vos coordonnées',
+    paraConfirmar:      'Nous avons besoin de vos coordonnées pour confirmer',
+    nombre:             'Nom complet *',
+    telefono:           'Téléphone *',
+    email:              'Email (facultatif)',
+    confirmar:          'Confirmer la réservation',
+    confirmando:        'Confirmation...',
+    confirmada:         'Réservation confirmée!',
+    confirmadaDesc:     'Nous avons reçu votre réservation chez',
+    otraReserva:        'Faire une autre réservation',
+    sinHuecos:          'Aucun créneau disponible',
+    sinHuecosDesc:      'Essayez un autre jour',
+    elegirOtroDia:      'Choisir un autre jour',
+    sinDias:            'Aucun jour disponible',
+    sinDiasDesc:        "Contactez directement l'entreprise",
+    gestionado:         'Réservations gérées par',
+    servicio:           'Service',
+    profesional:        'Professionnel',
+    fecha:              'Date',
+    hora:               'Heure',
+    resumen:            'Résumé de votre rendez-vous',
+    volver:             '← Retour',
+  },
+};
+
+const MESES_MAP = {
+  es: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+  en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+  fr: ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'],
+};
+
+const DIAS_MAP = {
+  es: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
+  en: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+  fr: ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],
+};
 
 export default function PaginaPublica() {
   const { slug } = useParams();
+  const [idioma, setIdioma] = useState('es');
+  const t = TEXTOS[idioma];
+  const meses = MESES_MAP[idioma];
+  const diasSemana = DIAS_MAP[idioma];
+
   const [negocio, setNegocio] = useState(null);
   const [servicios, setServicios] = useState([]);
   const [empleados, setEmpleados] = useState([]);
@@ -29,7 +142,7 @@ export default function PaginaPublica() {
 
   useEffect(() => {
     fetchNegocio();
-  }, [slug]);
+  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchNegocio = async () => {
     const { data: neg } = await supabase
@@ -44,10 +157,10 @@ export default function PaginaPublica() {
       supabase.from('configuracion').select('*').eq('negocio_id', neg.id).single(),
     ]);
 
-    if (serRes.data)   setServicios(serRes.data);
-    if (empRes.data)   setEmpleados(empRes.data);
+    if (serRes.data)     setServicios(serRes.data);
+    if (empRes.data)     setEmpleados(empRes.data);
     if (cierresRes.data) setCierres(cierresRes.data);
-    if (cfgRes.data)   setConfiguracion(cfgRes.data);
+    if (cfgRes.data)     setConfiguracion(cfgRes.data);
     setLoading(false);
   };
 
@@ -135,7 +248,6 @@ export default function PaginaPublica() {
     setError('');
 
     try {
-      // Anti-spam
       const hace24h = new Date(Date.now() - 24*60*60*1000).toISOString();
       const { data: clienteSpam } = await supabase
         .from('clientes').select('id')
@@ -153,8 +265,8 @@ export default function PaginaPublica() {
         }
       }
 
-      // Doble check disponibilidad
       const fechaStr = `${selFecha.getFullYear()}-${String(selFecha.getMonth()+1).padStart(2,'0')}-${String(selFecha.getDate()).padStart(2,'0')}`;
+
       const { data: conflicto } = await supabase
         .from('reservas').select('id')
         .eq('negocio_id', negocio.id).eq('fecha', fechaStr)
@@ -169,7 +281,6 @@ export default function PaginaPublica() {
         return;
       }
 
-      // Buscar o crear cliente
       let clienteId = null;
       const { data: clienteExistente } = await supabase
         .from('clientes').select('id')
@@ -189,7 +300,6 @@ export default function PaginaPublica() {
         if (nuevoCliente) clienteId = nuevoCliente.id;
       }
 
-      // Crear reserva
       const { data: reserva, error: resError } = await supabase
         .from('reservas').insert({
           negocio_id:   negocio.id,
@@ -205,7 +315,6 @@ export default function PaginaPublica() {
 
       if (resError) throw new Error('Error al crear la reserva.');
 
-      // Enviar confirmación por email si tiene email
       if (datosCliente.email) {
         const { data: servicioData } = await supabase
           .from('servicios').select('nombre').eq('id', selServicio.id).single();
@@ -217,13 +326,14 @@ export default function PaginaPublica() {
           empleado: selEmpleado,
         });
       }
-// Notificar al negocio de la nueva reserva
-pushNotifications.nuevaReserva({
-  clienteNombre: datosCliente.nombre,
-  servicio:      selServicio?.nombre || 'Servicio',
-  fecha:         fechaStr,
-  hora:          selHora.hora,
-});
+
+      pushNotifications.nuevaReserva({
+        clienteNombre: datosCliente.nombre,
+        servicio:      selServicio?.nombre || 'Servicio',
+        fecha:         fechaStr,
+        hora:          selHora.hora,
+      });
+
       setReservaId(reserva.id);
       setPaso(6);
     } catch (err) {
@@ -260,7 +370,7 @@ pushNotifications.nuevaReserva({
     <div style={{ minHeight:'100vh', background:'#F4FAF7', fontFamily:'DM Sans, system-ui, sans-serif' }}>
 
       {/* Header */}
-      <div style={{ background:'#063D2A', padding:'20px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ background:'#063D2A', padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
             <path d="M10 42L10 8C10 5 12 4 14 4L28 4C38 4 44 10 44 18C44 26 38 32 28 32L10 32M21 32L44 42"
@@ -270,43 +380,48 @@ pushNotifications.nuevaReserva({
           </svg>
           <span style={{ fontSize:15, fontWeight:700, color:'#fff' }}>Reservly</span>
         </div>
-        <div style={{ fontSize:12, color:'#ffffff60' }}>reservly.com/{slug}</div>
+        <div style={{ display:'flex', gap:4 }}>
+          {['es','en','fr'].map(lang => (
+            <button key={lang} onClick={() => setIdioma(lang)}
+              style={{ padding:'4px 8px', fontSize:13, fontWeight:600, borderRadius:6, border:'none', cursor:'pointer',
+                background: idioma===lang ? '#0A9E6E' : '#ffffff20',
+                color: idioma===lang ? '#fff' : '#ffffff80',
+              }}>
+              {lang === 'es' ? '🇪🇸' : lang === 'en' ? '🇬🇧' : '🇫🇷'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Info negocio */}
-      <div style={{ background:'#0A9E6E', padding:'32px 24px', textAlign:'center' }}>
-        <div style={{ width:72, height:72, borderRadius:'50%', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:700, color:'#fff', margin:'0 auto 14px', border:'3px solid rgba(255,255,255,0.3)' }}>
+      <div style={{ background:'#0A9E6E', padding:'28px 20px', textAlign:'center' }}>
+        <div style={{ width:68, height:68, borderRadius:'50%', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, fontWeight:700, color:'#fff', margin:'0 auto 12px', border:'3px solid rgba(255,255,255,0.3)' }}>
           {negocio.nombre?.[0]?.toUpperCase()}
         </div>
-        <h1 style={{ fontSize:24, fontWeight:700, color:'#fff', marginBottom:6 }}>{negocio.nombre}</h1>
+        <h1 style={{ fontSize:22, fontWeight:700, color:'#fff', marginBottom:6 }}>{negocio.nombre}</h1>
         {negocio.descripcion && (
-          <p style={{ fontSize:14, color:'rgba(255,255,255,0.8)', maxWidth:400, margin:'0 auto 10px', lineHeight:1.5 }}>{negocio.descripcion}</p>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.8)', maxWidth:400, margin:'0 auto 8px', lineHeight:1.5 }}>{negocio.descripcion}</p>
         )}
-        {negocio.direccion && (
-          <div style={{ fontSize:13, color:'rgba(255,255,255,0.7)' }}>📍 {negocio.direccion}</div>
-        )}
-        {negocio.telefono && (
-          <div style={{ fontSize:13, color:'rgba(255,255,255,0.7)', marginTop:4 }}>📞 {negocio.telefono}</div>
-        )}
+        {negocio.direccion && <div style={{ fontSize:13, color:'rgba(255,255,255,0.7)' }}>📍 {negocio.direccion}</div>}
+        {negocio.telefono  && <div style={{ fontSize:13, color:'rgba(255,255,255,0.7)', marginTop:3 }}>📞 {negocio.telefono}</div>}
       </div>
 
-      <div style={{ maxWidth:560, margin:'0 auto', padding:'32px 20px' }}>
+      <div style={{ maxWidth:560, margin:'0 auto', padding:'28px 16px' }}>
 
         {/* PASO 6: CONFIRMADO */}
         {paso === 6 && (
-          <div style={{ background:'#fff', borderRadius:16, padding:'40px 32px', textAlign:'center' }}>
-            <div style={{ width:72, height:72, borderRadius:'50%', background:'#E8F7F2', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 20px' }}>✓</div>
-            <h2 style={{ fontSize:22, fontWeight:700, color:'#0B1E16', marginBottom:10 }}>¡Reserva confirmada!</h2>
-            <p style={{ fontSize:14, color:'#6B9080', lineHeight:1.6, marginBottom:24 }}>
-              Hemos recibido tu reserva en <strong>{negocio.nombre}</strong>.<br/>
-              Recibirás una confirmación pronto.
+          <div style={{ background:'#fff', borderRadius:16, padding:'36px 28px', textAlign:'center' }}>
+            <div style={{ width:68, height:68, borderRadius:'50%', background:'#E8F7F2', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, margin:'0 auto 18px' }}>✓</div>
+            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:8 }}>{t.confirmada}</h2>
+            <p style={{ fontSize:14, color:'#6B9080', lineHeight:1.6, marginBottom:20 }}>
+              {t.confirmadaDesc} <strong>{negocio.nombre}</strong>.
             </p>
-            <div style={{ background:'#F4FAF7', borderRadius:12, padding:20, marginBottom:24, textAlign:'left' }}>
+            <div style={{ background:'#F4FAF7', borderRadius:12, padding:18, marginBottom:20, textAlign:'left' }}>
               {[
-                { label:'Servicio',    val: selServicio?.nombre },
-                { label:'Profesional', val: selEmpleado?.nombre },
-                { label:'Fecha',       val: selFecha ? `${DIAS_SEMANA[selFecha.getDay()]} ${selFecha.getDate()} ${MESES[selFecha.getMonth()]}` : '' },
-                { label:'Hora',        val: selHora?.hora },
+                { label: t.servicio,     val: selServicio?.nombre },
+                { label: t.profesional,  val: selEmpleado?.nombre },
+                { label: t.fecha,        val: selFecha ? `${diasSemana[selFecha.getDay()]} ${selFecha.getDate()} ${meses[selFecha.getMonth()]}` : '' },
+                { label: t.hora,         val: selHora?.hora },
               ].filter(r => r.val).map((r, i, arr) => (
                 <div key={r.label} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom: i<arr.length-1?'1px solid #EAF5EF':'none', fontSize:13 }}>
                   <span style={{ color:'#6B9080' }}>{r.label}</span>
@@ -319,7 +434,7 @@ pushNotifications.nuevaReserva({
               setSelFecha(null); setSelHora(null);
               setDatosCliente({ nombre:'', email:'', telefono:'' }); setError('');
             }} style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'12px 28px', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }}>
-              Hacer otra reserva
+              {t.otraReserva}
             </button>
           </div>
         )}
@@ -327,12 +442,12 @@ pushNotifications.nuevaReserva({
         {/* PASO 0: SERVICIO */}
         {paso === 0 && (
           <div>
-            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>Reserva tu cita</h2>
-            <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Elige el servicio que necesitas</p>
+            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>{t.reservar}</h2>
+            <p style={{ fontSize:14, color:'#6B9080', marginBottom:20 }}>{t.elegirServicio}</p>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {servicios.map(s => (
                 <div key={s.id} onClick={() => { setSelServicio(s); setPaso(negocio.tipo === 'profesional' ? 1 : 2); }}
-                  style={{ background:'#fff', border:'1.5px solid #EAF5EF', borderRadius:12, padding:'16px 18px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between' }}
+                  style={{ background:'#fff', border:'1.5px solid #EAF5EF', borderRadius:12, padding:'14px 16px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor='#0A9E6E'; e.currentTarget.style.background='#E8F7F2'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor='#EAF5EF'; e.currentTarget.style.background='#fff'; }}
                 >
@@ -341,7 +456,7 @@ pushNotifications.nuevaReserva({
                     <div style={{ fontSize:12.5, color:'#6B9080', marginTop:3 }}>{s.duracion} min</div>
                   </div>
                   <div style={{ fontSize:16, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace' }}>
-                    {s.precio_a_consultar ? 'A consultar' : s.precio ? `${s.precio} EUR` : '—'}
+                    {s.precio_a_consultar ? t.email : s.precio ? `${s.precio} EUR` : '—'}
                   </div>
                 </div>
               ))}
@@ -357,24 +472,24 @@ pushNotifications.nuevaReserva({
         {/* PASO 1: EMPLEADO */}
         {paso === 1 && (
           <div>
-            <button onClick={() => setPaso(0)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>← Volver</button>
-            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>¿Con quién quieres la cita?</h2>
-            <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Selecciona un profesional o deja que te asignemos uno</p>
+            <button onClick={() => setPaso(0)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>{t.volver}</button>
+            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>{t.conQuien}</h2>
+            <p style={{ fontSize:14, color:'#6B9080', marginBottom:20 }}>{t.sinPreferenciaDesc}</p>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               <div onClick={() => { setSelEmpleado(null); setPaso(2); }}
-                style={{ background:'#fff', border:'1.5px solid #EAF5EF', borderRadius:12, padding:'14px 18px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}
+                style={{ background:'#fff', border:'1.5px solid #EAF5EF', borderRadius:12, padding:'14px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor='#0A9E6E'}
                 onMouseLeave={e => e.currentTarget.style.borderColor='#EAF5EF'}
               >
                 <div style={{ width:44, height:44, borderRadius:'50%', background:'#EAF5EF', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>🎲</div>
                 <div>
-                  <div style={{ fontSize:14, fontWeight:600, color:'#0B1E16' }}>Sin preferencia</div>
-                  <div style={{ fontSize:12, color:'#6B9080' }}>Te asignamos el profesional disponible</div>
+                  <div style={{ fontSize:14, fontWeight:600, color:'#0B1E16' }}>{t.sinPreferencia}</div>
+                  <div style={{ fontSize:12, color:'#6B9080' }}>{t.sinPreferenciaDesc}</div>
                 </div>
               </div>
               {empleados.map(e => (
                 <div key={e.id} onClick={() => { setSelEmpleado(e); setPaso(2); }}
-                  style={{ background:'#fff', border:'1.5px solid #EAF5EF', borderRadius:12, padding:'14px 18px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}
+                  style={{ background:'#fff', border:'1.5px solid #EAF5EF', borderRadius:12, padding:'14px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:12 }}
                   onMouseEnter={ev => ev.currentTarget.style.borderColor='#0A9E6E'}
                   onMouseLeave={ev => ev.currentTarget.style.borderColor='#EAF5EF'}
                 >
@@ -391,9 +506,9 @@ pushNotifications.nuevaReserva({
         {/* PASO 2: FECHA */}
         {paso === 2 && (
           <div>
-            <button onClick={() => setPaso(negocio.tipo === 'profesional' ? 1 : 0)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>← Volver</button>
-            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>¿Qué día te viene bien?</h2>
-            <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Próximos 30 días disponibles</p>
+            <button onClick={() => setPaso(negocio.tipo === 'profesional' ? 1 : 0)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>{t.volver}</button>
+            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>{t.queDia}</h2>
+            <p style={{ fontSize:14, color:'#6B9080', marginBottom:20 }}>{t.proximos30}</p>
             {dias.length > 0 ? (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
                 {dias.map((d, i) => (
@@ -405,21 +520,21 @@ pushNotifications.nuevaReserva({
                     );
                     setPaso(3);
                   }}
-                    style={{ background:'#fff', border:`1.5px solid ${selFecha?.toDateString()===d.toDateString() ? '#0A9E6E' : '#EAF5EF'}`, borderRadius:10, padding:'12px 8px', cursor:'pointer', textAlign:'center' }}
+                    style={{ background:'#fff', border:`1.5px solid ${selFecha?.toDateString()===d.toDateString() ? '#0A9E6E' : '#EAF5EF'}`, borderRadius:10, padding:'10px 6px', cursor:'pointer', textAlign:'center' }}
                     onMouseEnter={e => e.currentTarget.style.borderColor='#0A9E6E'}
                     onMouseLeave={e => e.currentTarget.style.borderColor=selFecha?.toDateString()===d.toDateString()?'#0A9E6E':'#EAF5EF'}
                   >
-                    <div style={{ fontSize:10.5, color:'#6B9080', fontWeight:600, textTransform:'uppercase' }}>{DIAS_SEMANA[d.getDay()].slice(0,3)}</div>
+                    <div style={{ fontSize:10.5, color:'#6B9080', fontWeight:600, textTransform:'uppercase' }}>{diasSemana[d.getDay()].slice(0,3)}</div>
                     <div style={{ fontSize:20, fontWeight:700, color:'#0B1E16', margin:'4px 0' }}>{d.getDate()}</div>
-                    <div style={{ fontSize:10.5, color:'#6B9080' }}>{MESES[d.getMonth()]}</div>
+                    <div style={{ fontSize:10.5, color:'#6B9080' }}>{meses[d.getMonth()]}</div>
                   </div>
                 ))}
               </div>
             ) : (
               <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:12, padding:24, textAlign:'center' }}>
                 <div style={{ fontSize:28, marginBottom:8 }}>😔</div>
-                <div style={{ fontSize:14, fontWeight:600, color:'#92400E' }}>No hay días disponibles</div>
-                <div style={{ fontSize:13, color:'#6B9080', marginTop:4 }}>Contacta directamente con el negocio</div>
+                <div style={{ fontSize:14, fontWeight:600, color:'#92400E' }}>{t.sinDias}</div>
+                <div style={{ fontSize:13, color:'#6B9080', marginTop:4 }}>{t.sinDiasDesc}</div>
               </div>
             )}
           </div>
@@ -428,10 +543,10 @@ pushNotifications.nuevaReserva({
         {/* PASO 3: HORA */}
         {paso === 3 && (
           <div>
-            <button onClick={() => setPaso(2)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>← Volver</button>
-            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>¿A qué hora?</h2>
-            <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>
-              {selFecha ? `${DIAS_SEMANA[selFecha.getDay()]} ${selFecha.getDate()} de ${MESES[selFecha.getMonth()]}` : ''}
+            <button onClick={() => setPaso(2)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>{t.volver}</button>
+            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>{t.aQueHora}</h2>
+            <p style={{ fontSize:14, color:'#6B9080', marginBottom:20 }}>
+              {selFecha ? `${diasSemana[selFecha.getDay()]} ${selFecha.getDate()} ${meses[selFecha.getMonth()]}` : ''}
               {selServicio ? ` · ${selServicio.duracion} min` : ''}
             </p>
             {huecos.length > 0 ? (
@@ -449,10 +564,10 @@ pushNotifications.nuevaReserva({
             ) : (
               <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:12, padding:'24px', textAlign:'center' }}>
                 <div style={{ fontSize:28, marginBottom:8 }}>😔</div>
-                <div style={{ fontSize:14, fontWeight:600, color:'#92400E', marginBottom:4 }}>No hay huecos disponibles</div>
-                <div style={{ fontSize:13, color:'#6B9080' }}>Prueba con otro día</div>
+                <div style={{ fontSize:14, fontWeight:600, color:'#92400E', marginBottom:4 }}>{t.sinHuecos}</div>
+                <div style={{ fontSize:13, color:'#6B9080' }}>{t.sinHuecosDesc}</div>
                 <button onClick={() => setPaso(2)} style={{ marginTop:14, background:'#0A9E6E', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                  Elegir otro día
+                  {t.elegirOtroDia}
                 </button>
               </div>
             )}
@@ -462,14 +577,14 @@ pushNotifications.nuevaReserva({
         {/* PASO 4: DATOS CLIENTE */}
         {paso === 4 && (
           <div>
-            <button onClick={() => setPaso(3)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>← Volver</button>
-            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>Tus datos</h2>
-            <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Para confirmar tu reserva necesitamos tus datos</p>
+            <button onClick={() => setPaso(3)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>{t.volver}</button>
+            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>{t.tusDatos}</h2>
+            <p style={{ fontSize:14, color:'#6B9080', marginBottom:20 }}>{t.paraConfirmar}</p>
 
-            <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:12, padding:'14px 16px', marginBottom:24 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:'#063D2A', marginBottom:6 }}>Resumen de tu cita</div>
+            <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:12, padding:'12px 16px', marginBottom:20 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'#063D2A', marginBottom:6 }}>{t.resumen}</div>
               <div style={{ fontSize:13, color:'#0B1E16' }}>
-                {selServicio?.nombre} · {selFecha ? `${selFecha.getDate()} ${MESES[selFecha.getMonth()]}` : ''} · {selHora?.hora}
+                {selServicio?.nombre} · {selFecha ? `${selFecha.getDate()} ${meses[selFecha.getMonth()]}` : ''} · {selHora?.hora}
                 {selEmpleado ? ` · ${selEmpleado.nombre}` : ''}
               </div>
               {selServicio?.precio && !selServicio?.precio_a_consultar && (
@@ -477,11 +592,11 @@ pushNotifications.nuevaReserva({
               )}
             </div>
 
-            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               {[
-                { key:'nombre',   label:'Nombre completo *', placeholder:'Ej: Carmen López',   type:'text', mono:false },
-                { key:'telefono', label:'Teléfono *',         placeholder:'+34 600 000 000',     type:'tel',  mono:true  },
-                { key:'email',    label:'Email (opcional)',    placeholder:'tu@email.com',        type:'email',mono:false },
+                { key:'nombre',   label: t.nombre,   placeholder:'Carmen López', type:'text',  mono:false },
+                { key:'telefono', label: t.telefono,  placeholder:'+34 600 000 000', type:'tel', mono:true  },
+                { key:'email',    label: t.email,     placeholder:'tu@email.com', type:'email', mono:false },
               ].map(f => (
                 <div key={f.key}>
                   <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:5 }}>{f.label}</label>
@@ -499,21 +614,19 @@ pushNotifications.nuevaReserva({
 
               <button onClick={confirmarReserva} disabled={enviando}
                 style={{ width:'100%', padding:'14px', background: enviando ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor: enviando ? 'not-allowed' : 'pointer', marginTop:4 }}>
-                {enviando ? 'Confirmando...' : 'Confirmar reserva'}
+                {enviando ? t.confirmando : t.confirmar}
               </button>
 
               <div style={{ fontSize:12, color:'#A8C4B8', textAlign:'center', lineHeight:1.6 }}>
-                Al confirmar aceptas que {negocio.nombre} guarde tus datos de contacto
-                para gestionar tu reserva, de acuerdo con el RGPD.
-                Puedes solicitar su eliminación contactando directamente con el negocio.
+                Al confirmar aceptas que {negocio.nombre} guarde tus datos de contacto para gestionar tu reserva, de acuerdo con el RGPD.
               </div>
             </div>
           </div>
         )}
 
         {paso < 6 && (
-          <div style={{ textAlign:'center', marginTop:32, fontSize:12, color:'#A8C4B8' }}>
-            Reservas gestionadas por <strong style={{ color:'#0A9E6E' }}>Reservly</strong>
+          <div style={{ textAlign:'center', marginTop:28, fontSize:12, color:'#A8C4B8' }}>
+            {t.gestionado} <strong style={{ color:'#0A9E6E' }}>Reservly</strong>
           </div>
         )}
 
