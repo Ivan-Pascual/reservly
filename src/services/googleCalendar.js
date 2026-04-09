@@ -16,23 +16,21 @@ export const googleCalendar = {
   },
 
   // Cargar GSI (Google Sign-In)
-  cargarGSI: () => {
-  return new Promise((resolve, reject) => {
+ cargarGSI: () => {
+  return new Promise((resolve) => {
     if (window.google?.accounts?.oauth2) { resolve(); return; }
-    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    if (existing) {
-      // Script ya existe, esperar a que cargue
-      existing.addEventListener('load', resolve);
-      existing.addEventListener('error', reject);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
+    // Esperar hasta 4 segundos a que cargue
+    let t = 0;
+    const interval = setInterval(() => {
+      t += 100;
+      if (window.google?.accounts?.oauth2) {
+        clearInterval(interval);
+        resolve();
+      } else if (t >= 4000) {
+        clearInterval(interval);
+        resolve(); // intentar igualmente
+      }
+    }, 100);
   });
 },
   // Iniciar sesión con Google y obtener token
