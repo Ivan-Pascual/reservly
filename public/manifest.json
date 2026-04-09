@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Reservly",
+  "name": "Reservly — Tus citas, en piloto automático",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,18 +8,16 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#063D2A",
+  "background_color": "#F4FAF7",
+  "orientation": "portrait",
+  "description": "Gestiona las reservas de tu negocio con Reservly"
 }
