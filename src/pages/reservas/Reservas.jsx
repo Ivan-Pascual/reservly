@@ -37,14 +37,14 @@ export default function Reservas() {
   const [editando, setEditando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [clienteNuevo, setClienteNuevo] = useState({ nombre:'', telefono:'', email:'' });
-const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'nuevo'
+  const [modoCliente, setModoCliente] = useState('existente');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(formVacio);
 
   useEffect(() => {
     if (!negocio) return;
     fetchTodo();
-  }, [negocio]);
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchTodo = async () => {
     const [resRes, cliRes, empRes, serRes] = await Promise.all([
@@ -78,75 +78,73 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
   };
 
   const cerrarForm = () => {
-  setShowForm(false);
-  setEditando(null);
-  setForm(formVacio);
-  setModoCliente('existente');
-  setClienteNuevo({ nombre:'', telefono:'', email:'' });
-};
-
-  const guardarReserva = async () => {
-  if (modoCliente === 'existente' && !form.cliente_id) {
-    alert('Selecciona un cliente o crea uno nuevo.');
-    return;
-  }
-  if (modoCliente === 'nuevo' && !clienteNuevo.nombre.trim()) {
-    alert('El nombre del cliente es obligatorio.');
-    return;
-  }
-  if (!form.fecha || !form.hora_inicio) return;
-  setSaving(true);
-
-  let clienteId = form.cliente_id;
-
-  // Crear cliente nuevo al vuelo
-  if (modoCliente === 'nuevo') {
-    const { data: nuevoCliente, error } = await supabase
-      .from('clientes').insert({
-        negocio_id: negocio.id,
-        nombre:     clienteNuevo.nombre.trim(),
-        telefono:   clienteNuevo.telefono.trim() || null,
-        email:      clienteNuevo.email.trim() || null,
-        tag:        'nuevo',
-      }).select().single();
-
-    if (error || !nuevoCliente) {
-      alert('Error al crear el cliente.');
-      setSaving(false);
-      return;
-    }
-    clienteId = nuevoCliente.id;
-    // Actualizar lista de clientes
-    setClientes(prev => [...prev, nuevoCliente]);
-  }
-
-  const payload = {
-    cliente_id:  clienteId  || null,
-    empleado_id: form.empleado_id || null,
-    servicio_id: form.servicio_id || null,
-    fecha:       form.fecha,
-    hora_inicio: form.hora_inicio,
-    hora_fin:    form.hora_fin,
-    estado:      form.estado,
-    notas:       form.notas || null,
+    setShowForm(false);
+    setEditando(null);
+    setForm(formVacio);
+    setModoCliente('existente');
+    setClienteNuevo({ nombre:'', telefono:'', email:'' });
   };
 
-  if (editando) {
-    const reservaActual = reservas.find(r => r.id === editando);
-    if (reservaActual?.estado === 'completada') {
-      alert('No se puede editar una reserva ya completada.');
-      setSaving(false);
+  const guardarReserva = async () => {
+    if (modoCliente === 'existente' && !form.cliente_id) {
+      alert('Selecciona un cliente o crea uno nuevo.');
       return;
     }
-    await supabase.from('reservas').update(payload).eq('id', editando);
-  } else {
-    await supabase.from('reservas').insert({ ...payload, negocio_id: negocio.id });
-  }
+    if (modoCliente === 'nuevo' && !clienteNuevo.nombre.trim()) {
+      alert('El nombre del cliente es obligatorio.');
+      return;
+    }
+    if (!form.fecha || !form.hora_inicio) return;
+    setSaving(true);
 
-  cerrarForm();
-  fetchTodo();
-  setSaving(false);
-};
+    let clienteId = form.cliente_id;
+
+    if (modoCliente === 'nuevo') {
+      const { data: nuevoCliente, error } = await supabase
+        .from('clientes').insert({
+          negocio_id: negocio.id,
+          nombre:     clienteNuevo.nombre.trim(),
+          telefono:   clienteNuevo.telefono.trim() || null,
+          email:      clienteNuevo.email.trim()    || null,
+          tag:        'nuevo',
+        }).select().single();
+      if (error || !nuevoCliente) {
+        alert('Error al crear el cliente.');
+        setSaving(false);
+        return;
+      }
+      clienteId = nuevoCliente.id;
+      setClientes(prev => [...prev, nuevoCliente]);
+    }
+
+    const payload = {
+      cliente_id:  clienteId        || null,
+      empleado_id: form.empleado_id || null,
+      servicio_id: form.servicio_id || null,
+      fecha:       form.fecha,
+      hora_inicio: form.hora_inicio,
+      hora_fin:    form.hora_fin,
+      estado:      form.estado,
+      notas:       form.notas || null,
+    };
+
+    if (editando) {
+      const reservaActual = reservas.find(r => r.id === editando);
+      if (reservaActual?.estado === 'completada') {
+        alert('No se puede editar una reserva ya completada.');
+        setSaving(false);
+        return;
+      }
+      await supabase.from('reservas').update(payload).eq('id', editando);
+    } else {
+      await supabase.from('reservas').insert({ ...payload, negocio_id: negocio.id });
+    }
+
+    cerrarForm();
+    fetchTodo();
+    setSaving(false);
+  };
+
   const eliminarReserva = async (id) => {
     if (!window.confirm('¿Cancelar esta reserva?')) return;
     await supabase.from('reservas').update({ estado: 'cancelada' }).eq('id', id);
@@ -163,20 +161,33 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
   const totalPaginas = Math.ceil(filtradas.length / POR_PAGINA);
   const paginadas = filtradas.slice((pagina-1)*POR_PAGINA, pagina*POR_PAGINA);
 
+  const pad = isMobile ? 16 : 32;
+
   if (loading) return (
     <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
     </div>
   );
 
-  const pad = isMobile ? 16 : 32;
-
-    return (
+  return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
-      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${isMobile ? 16 : 32}px`, height:60, display:'flex', alignItems:'center', gap:16 }}>
+      {/* Topbar */}
+      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Reservas</div>
-        <div style={{ marginLeft:'auto' }}>
+        <div style={{ marginLeft:'auto', display:'flex', gap:6, flexWrap:'wrap' }}>
+          {!isMobile && (
+            <>
+              <button onClick={() => exportarExcel.reservas(reservas, negocio?.nombre)}
+                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+                📊 Excel
+              </button>
+              <button onClick={() => exportarPDF.reservas(reservas, negocio?.nombre)}
+                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+                📄 PDF
+              </button>
+            </>
+          )}
           <button onClick={() => { cerrarForm(); setShowForm(true); }}
             style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
             + Nueva
@@ -184,7 +195,7 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
         </div>
       </div>
 
-      <div style={{ padding: isMobile ? 16 : 32, display:'flex', flexDirection:'column', gap:16 }}>
+      <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:16 }}>
 
         {/* Form */}
         {showForm && (
@@ -225,15 +236,15 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
                 ) : (
                   <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                     <input value={clienteNuevo.nombre}
-                      onChange={e => setClienteNuevo({...clienteNuevo, nombre:e.target.value})}
+                      onChange={e=>setClienteNuevo({...clienteNuevo, nombre:e.target.value})}
                       placeholder="Nombre *"
                       style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
                     <input value={clienteNuevo.telefono}
-                      onChange={e => setClienteNuevo({...clienteNuevo, telefono:e.target.value})}
+                      onChange={e=>setClienteNuevo({...clienteNuevo, telefono:e.target.value})}
                       placeholder="Teléfono"
                       style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
                     <input value={clienteNuevo.email}
-                      onChange={e => setClienteNuevo({...clienteNuevo, email:e.target.value})}
+                      onChange={e=>setClienteNuevo({...clienteNuevo, email:e.target.value})}
                       placeholder="Email (opcional)" type="email"
                       style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
                   </div>
@@ -255,7 +266,7 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
                   <select value={form.servicio_id} onChange={e=>setForm({...form, servicio_id:e.target.value})}
                     style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13 }}>
                     <option value="">Sin asignar</option>
-                    {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre} — {s.precio ? s.precio + ' EUR' : 'A consultar'}</option>)}
+                    {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre} — {s.precio ? s.precio+' EUR' : 'A consultar'}</option>)}
                   </select>
                 </div>
               </div>
@@ -295,16 +306,7 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
                   placeholder="Notas internas sobre la reserva..."
                   style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
               </div>
-<div style={{ display:'flex', gap:6 }}>
-  <button onClick={() => exportarExcel.reservas(reservas, negocio?.nombre)}
-    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-    📊 Excel
-  </button>
-  <button onClick={() => exportarPDF.reservas(reservas, negocio?.nombre)}
-    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-    📄 PDF
-  </button>
-</div>
+
             </div>
             <div style={{ display:'flex', gap:8, marginTop:16 }}>
               <button onClick={guardarReserva} disabled={saving}
@@ -321,7 +323,7 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
 
         {/* Filtros */}
         <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:10, alignItems: isMobile ? 'stretch' : 'center', flexWrap:'wrap' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, padding:'7px 14px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, padding:'7px 14px', flex: isMobile ? 'auto' : 1 }}>
             <span style={{ color:'#A8C4B8' }}>🔍</span>
             <input value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
               placeholder="Buscar cliente..."
@@ -332,7 +334,7 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
           {fechaFiltro && (
             <button onClick={() => { setFechaFiltro(''); setPagina(1); }}
               style={{ padding:'7px 12px', background:'#FEF2F2', border:'none', borderRadius:8, fontSize:12, color:'#EF4444', fontWeight:600, cursor:'pointer' }}>
-              ✕ Limpiar fecha
+              ✕ Limpiar
             </button>
           )}
           <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', flexWrap:'wrap' }}>
@@ -364,7 +366,7 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
                       </div>
                       <div style={{ fontSize:12.5, color:'#6B9080', marginBottom:4 }}>{r.servicios?.nombre || '—'}</div>
                       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
-                        {r.empleados && <div style={{ width:7, height:7, borderRadius:'50%', background: r.empleados.color || '#ccc' }}/>}
+                        {r.empleados && <div style={{ width:7, height:7, borderRadius:'50%', background:r.empleados.color||'#ccc' }}/>}
                         <span style={{ fontSize:12, color:'#6B9080' }}>{r.empleados?.nombre || '—'}</span>
                         <span style={{ fontSize:12, color:'#A8C4B8', marginLeft:'auto', fontFamily:'DM Mono, monospace' }}>{r.fecha} · {r.hora_inicio?.slice(0,5)}</span>
                       </div>
@@ -413,7 +415,7 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
                       <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{r.clientes?.nombre || '—'}</div>
                       <div style={{ fontSize:13, color:'#6B9080' }}>{r.servicios?.nombre || '—'}</div>
                       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                        <div style={{ width:8, height:8, borderRadius:'50%', background: r.empleados?.color || '#ccc' }}/>
+                        <div style={{ width:8, height:8, borderRadius:'50%', background:r.empleados?.color||'#ccc' }}/>
                         <span style={{ fontSize:13, color:'#0B1E16' }}>{r.empleados?.nombre || '—'}</span>
                       </div>
                       <div style={{ fontSize:12.5, color:'#6B9080' }}>{r.fecha}</div>
@@ -455,18 +457,18 @@ const [modoCliente, setModoCliente] = useState('existente'); // 'existente' | 'n
               </div>
               {totalPaginas > 1 && (
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                  <button onClick={() => setPagina(p => Math.max(1, p-1))} disabled={pagina===1}
-                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===1 ? '#F4FAF7' : '#fff', color: pagina===1 ? '#A8C4B8' : '#6B9080', fontSize:12, fontWeight:600, cursor: pagina===1 ? 'not-allowed' : 'pointer' }}>
+                  <button onClick={() => setPagina(p=>Math.max(1,p-1))} disabled={pagina===1}
+                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===1?'#F4FAF7':'#fff', color: pagina===1?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor: pagina===1?'not-allowed':'pointer' }}>
                     ← Anterior
                   </button>
-                  {Array.from({ length: totalPaginas }, (_, i) => i+1).map(p => (
+                  {Array.from({ length: totalPaginas }, (_,i) => i+1).map(p => (
                     <button key={p} onClick={() => setPagina(p)}
-                      style={{ padding:'6px 10px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===p ? '#0A9E6E' : '#fff', color: pagina===p ? '#fff' : '#6B9080', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                      style={{ padding:'6px 10px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===p?'#0A9E6E':'#fff', color: pagina===p?'#fff':'#6B9080', fontSize:12, fontWeight:600, cursor:'pointer' }}>
                       {p}
                     </button>
                   ))}
-                  <button onClick={() => setPagina(p => Math.min(totalPaginas, p+1))} disabled={pagina===totalPaginas}
-                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===totalPaginas ? '#F4FAF7' : '#fff', color: pagina===totalPaginas ? '#A8C4B8' : '#6B9080', fontSize:12, fontWeight:600, cursor: pagina===totalPaginas ? 'not-allowed' : 'pointer' }}>
+                  <button onClick={() => setPagina(p=>Math.min(totalPaginas,p+1))} disabled={pagina===totalPaginas}
+                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===totalPaginas?'#F4FAF7':'#fff', color: pagina===totalPaginas?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor: pagina===totalPaginas?'not-allowed':'pointer' }}>
                     Siguiente →
                   </button>
                 </div>

@@ -49,16 +49,43 @@ function TituloManager() {
   }, [location]);
   return null;
 }
-
 function NotFound() {
+  const navigate = useNavigate();
   return (
-    <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, padding:40 }}>
-      <div style={{ fontSize:64 }}>🔍</div>
-      <div style={{ fontSize:24, fontWeight:700, color:'#0B1E16' }}>Página no encontrada</div>
-      <div style={{ fontSize:14, color:'#6B9080' }}>La URL que has introducido no existe</div>
-      <a href="/dashboard" style={{ background:'#0A9E6E', color:'#fff', padding:'10px 24px', borderRadius:8, fontSize:13, fontWeight:600, textDecoration:'none', marginTop:8 }}>
-        Volver al inicio
-      </a>
+    <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:0, padding:40, textAlign:'center', minHeight:'60vh' }}>
+      <div style={{ fontSize:80, marginBottom:16, lineHeight:1 }}>🔍</div>
+      <div style={{ fontSize:11, fontWeight:700, color:'#0A9E6E', textTransform:'uppercase', letterSpacing:'2px', marginBottom:12 }}>Error 404</div>
+      <h1 style={{ fontSize:'clamp(24px,4vw,36px)', fontWeight:800, color:'#0B1E16', marginBottom:12, letterSpacing:-0.5 }}>
+        Página no encontrada
+      </h1>
+      <p style={{ fontSize:15, color:'#6B9080', maxWidth:400, lineHeight:1.7, marginBottom:32 }}>
+        La URL que has introducido no existe. Puede que haya sido movida o que hayas cometido un error al escribirla.
+      </p>
+      <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center', marginBottom:40 }}>
+        <button onClick={() => navigate('/dashboard')}
+          style={{ padding:'12px 24px', background:'#0A9E6E', color:'#fff', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+          Ir al inicio →
+        </button>
+        <button onClick={() => navigate(-1)}
+          style={{ padding:'12px 24px', background:'transparent', color:'#6B9080', border:'1px solid #D6EDE5', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }}>
+          ← Volver atrás
+        </button>
+      </div>
+      <div style={{ display:'flex', gap:16, flexWrap:'wrap', justifyContent:'center' }}>
+        {[
+          { label:'Reservas',     ruta:'/reservas',     emoji:'📅' },
+          { label:'Clientes',     ruta:'/clientes',     emoji:'👤' },
+          { label:'Estadísticas', ruta:'/estadisticas', emoji:'📈' },
+          { label:'Ajustes',      ruta:'/ajustes',      emoji:'⚙️' },
+        ].map(a => (
+          <div key={a.ruta} onClick={() => navigate(a.ruta)}
+            style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', background:'#F4FAF7', border:'1px solid #EAF5EF', borderRadius:8, cursor:'pointer', fontSize:13, color:'#6B9080', fontWeight:500 }}
+            onMouseEnter={e=>{ e.currentTarget.style.background='#E8F7F2'; e.currentTarget.style.color='#0A9E6E'; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background='#F4FAF7'; e.currentTarget.style.color='#6B9080'; }}>
+            <span>{a.emoji}</span>{a.label}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

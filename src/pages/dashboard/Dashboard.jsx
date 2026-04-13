@@ -15,7 +15,7 @@ const AptRow = ({ nombre, servicio, empleado, hora_inicio, hora_fin, estado }) =
   const s = colors[estado] || colors.confirmada;
   return (
     <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:s.bg, border:`1px solid ${s.border}`, borderRadius:8, marginBottom:6 }}>
-      <div style={{ width:3, height:32, borderRadius:2, background:s.dot, flexShrink:0 }} />
+      <div style={{ width:3, height:32, borderRadius:2, background:s.dot, flexShrink:0 }}/>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{nombre}</div>
         <div style={{ fontSize:11.5, color:'#6B9080', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{servicio} · {empleado}</div>
@@ -24,6 +24,15 @@ const AptRow = ({ nombre, servicio, empleado, hora_inicio, hora_fin, estado }) =
       <div style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.badge, color:s.badgeText, flexShrink:0 }}>{s.label}</div>
     </div>
   );
+};
+
+const getMinutosDesdeAhora = (horaStr) => {
+  if (!horaStr) return null;
+  const ahora = new Date();
+  const [h, m] = horaStr.slice(0,5).split(':').map(Number);
+  const citaMin = h * 60 + m;
+  const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
+  return citaMin - ahoraMin;
 };
 
 export default function Dashboard() {
@@ -38,13 +47,21 @@ export default function Dashboard() {
   });
   const [empleados, setEmpleados] = useState([]);
   const [cargando, setCargando] = useState(true);
-const [permisoNotif, setPermisoNotif] = useState(
-  typeof Notification !== 'undefined' ? Notification.permission : 'denied'
-);
+  const [permisoNotif, setPermisoNotif] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+  );
+  const [horaActual, setHoraActual] = useState(new Date());
+
+  // Actualizar hora cada minuto para recordatorios en tiempo real
+  useEffect(() => {
+    const interval = setInterval(() => setHoraActual(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (!negocio) return;
     fetchData();
-  }, [negocio]);
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     const hoy = new Date().toISOString().split('T')[0];
@@ -55,7 +72,7 @@ const [permisoNotif, setPermisoNotif] = useState(
       totalHoyRes, totalMesRes, canceladasRes, pendientesRes,
       clientesTotalRes, clientesMesRes, empsRes,
     ] = await Promise.all([
-      supabase.from('reservas').select('*, clientes(nombre), empleados(nombre), servicios(nombre)')
+      supabase.from('reservas').select('*, clientes(nombre), empleados(nombre, color), servicios(nombre)')
         .eq('negocio_id', negocio.id).eq('fecha', hoy).order('hora_inicio'),
       supabase.from('tpv').select('importe').eq('negocio_id', negocio.id)
         .gte('created_at', hoy + 'T00:00:00'),
@@ -80,7 +97,7 @@ const [permisoNotif, setPermisoNotif] = useState(
     if (reservasRes.data) setReservasHoy(reservasRes.data);
     if (empsRes.data) setEmpleados(empsRes.data);
 
-    const sumarImportes = (data) => (data || []).reduce((a, t) => a + (t.importe || 0), 0);
+    const sumarImportes = (data) => (data || []).reduce((a, t) => a + (t.importe||0), 0);
 
     setStats({
       hoy:              totalHoyRes.count    || 0,
@@ -103,25 +120,40 @@ const [permisoNotif, setPermisoNotif] = useState(
     </div>
   );
 
-const hoyStrRaw = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const nombreNegocio = negocio?.nombre || 'tu negocio';
+  const hoyStrRaw = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);
+  const nombreNegocio = negocio?.nombre || 'tu negocio';
   const slug = negocio?.slug || '';
   const hora = new Date().getHours();
   const saludo = hora < 12 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
   const pad = isMobile ? 16 : 32;
 
+  // Calcular recordatorios — citas en los próximos 120 minutos
+  const proximasCitas = reservasHoy.filter(r => {
+    if (r.estado === 'cancelada' || r.estado === 'completada') return false;
+    const minutos = getMinutosDesdeAhora(r.hora_inicio);
+    return minutos !== null && minutos >= 0 && minutos <= 120;
+  });
+
+  const citaEnCurso = reservasHoy.filter(r => {
+    if (r.estado === 'cancelada') return false;
+    const miniInicio = getMinutosDesdeAhora(r.hora_inicio);
+    const miniFin    = getMinutosDesdeAhora(r.hora_fin);
+    return miniInicio !== null && miniFin !== null && miniInicio <= 0 && miniFin > 0;
+  });
+
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
       {/* Topbar */}
-      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:10 }}>
+      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Inicio</div>
         {!isMobile && (
-          <div style={{ background:'#EAF5EF', padding:'3px 10px', borderRadius:20, fontSize:12, color:'#6B9080', fontFamily:'DM Mono, monospace', textTransform:'capitalize' }}>
+          <div style={{ background:'#EAF5EF', padding:'3px 10px', borderRadius:20, fontSize:12, color:'#6B9080', fontFamily:'DM Mono, monospace' }}>
             {hoyStr}
           </div>
         )}
-        <div style={{ marginLeft:'auto', display:'flex', gap:8 }}>
+        <div style={{ marginLeft:'auto', display:'flex', gap:8, flexWrap:'wrap' }}>
           {!isMobile && (
             <button onClick={() => navigate('/agenda')}
               style={{ background:'transparent', color:'#6B9080', border:'1px solid #D6EDE5', padding:'7px 14px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
@@ -129,19 +161,19 @@ const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const no
             </button>
           )}
           {permisoNotif !== 'granted' && (
-  <button onClick={async () => {
-    const ok = await pushNotifications.solicitarPermiso();
-    setPermisoNotif(ok ? 'granted' : 'denied');
-  }}
-    style={{ background:'#FFF8E7', color:'#92400E', border:'1px solid #F5E4A0', padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
-    🔔 Activar alertas de reservas
-  </button>
-)}
-{permisoNotif === 'granted' && (
-  <span style={{ fontSize:12, color:'#0A9E6E', display:'flex', alignItems:'center', gap:4 }}>
-    🔔 Alertas activas
-  </span>
-)}
+            <button onClick={async () => {
+              const ok = await pushNotifications.solicitarPermiso();
+              setPermisoNotif(ok ? 'granted' : 'denied');
+            }}
+              style={{ background:'#FFF8E7', color:'#92400E', border:'1px solid #F5E4A0', padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+              🔔 Activar alertas
+            </button>
+          )}
+          {permisoNotif === 'granted' && !isMobile && (
+            <span style={{ fontSize:12, color:'#0A9E6E', display:'flex', alignItems:'center', gap:4 }}>
+              🔔 Alertas activas
+            </span>
+          )}
           <button onClick={() => navigate('/reservas')}
             style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'8px 14px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
             + Nueva
@@ -150,6 +182,53 @@ const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const no
       </div>
 
       <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:16 }}>
+
+        {/* Cita en curso */}
+        {citaEnCurso.length > 0 && (
+          <div style={{ background:'#063D2A', border:'none', borderRadius:12, padding:'14px 18px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
+            <div style={{ width:10, height:10, borderRadius:'50%', background:'#0A9E6E', flexShrink:0, boxShadow:'0 0 0 3px rgba(10,158,110,0.3)', animation:'pulse 2s infinite' }}/>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:2 }}>En curso ahora</div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>
+                {citaEnCurso[0].clientes?.nombre} — {citaEnCurso[0].servicios?.nombre}
+              </div>
+            </div>
+            <div style={{ fontSize:13, color:'#0A9E6E', fontFamily:'DM Mono, monospace', fontWeight:600 }}>
+              {citaEnCurso[0].hora_inicio?.slice(0,5)}–{citaEnCurso[0].hora_fin?.slice(0,5)}
+            </div>
+          </div>
+        )}
+
+        {/* Recordatorios próximas 2h */}
+        {proximasCitas.length > 0 && (
+          <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:12, padding:'14px 18px' }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#92400E', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}>
+              ⏰ Próximas 2 horas — {proximasCitas.length} {proximasCitas.length === 1 ? 'cita' : 'citas'}
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {proximasCitas.map(r => {
+                const minutos = getMinutosDesdeAhora(r.hora_inicio);
+                return (
+                  <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.7)', borderRadius:8, padding:'8px 12px' }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#F59E0B', fontFamily:'DM Mono, monospace', minWidth:36 }}>
+                      {minutos < 60 ? `${minutos}m` : `${Math.floor(minutos/60)}h${minutos%60>0?minutos%60+'m':''}`}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.clientes?.nombre || 'Cliente'}</div>
+                      <div style={{ fontSize:11.5, color:'#6B9080' }}>{r.servicios?.nombre} · {r.hora_inicio?.slice(0,5)}</div>
+                    </div>
+                    {r.empleados && (
+                      <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
+                        <div style={{ width:6, height:6, borderRadius:'50%', background:r.empleados.color||'#ccc' }}/>
+                        <span style={{ fontSize:11, color:'#6B9080' }}>{r.empleados.nombre}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Saludo */}
         <div style={{ display:'flex', alignItems: isMobile ? 'flex-start' : 'flex-end', justifyContent:'space-between', flexDirection: isMobile ? 'column' : 'row', gap:10 }}>
@@ -166,7 +245,7 @@ const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const no
           {slug && (
             <div onClick={() => window.open(`/reservar/${slug}`, '_blank')}
               style={{ display:'flex', alignItems:'center', gap:6, background:'#E8F7F2', border:'1px solid #D6EDE5', color:'#063D2A', fontSize:12, fontWeight:600, padding:'6px 12px', borderRadius:20, cursor:'pointer', whiteSpace:'nowrap' }}>
-              <span style={{ width:7, height:7, background:'#0A9E6E', borderRadius:'50%', display:'inline-block' }} />
+              <span style={{ width:7, height:7, background:'#0A9E6E', borderRadius:'50%', display:'inline-block' }}/>
               {isMobile ? 'Ver página pública' : `reservly.com/${slug}`}
             </div>
           )}
@@ -177,10 +256,10 @@ const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const no
           <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:8 }}>Reservas</div>
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:10 }}>
             {[
-              { label:'Citas hoy',   value: stats.hoy,        featured: true },
-              { label:'Este mes',    value: stats.mes },
-              { label:'Pendientes',  value: stats.pendientes },
-              { label:'Canceladas',  value: stats.canceladas },
+              { label:'Citas hoy',  value: stats.hoy,        featured:true },
+              { label:'Este mes',   value: stats.mes                        },
+              { label:'Pendientes', value: stats.pendientes                 },
+              { label:'Canceladas', value: stats.canceladas                 },
             ].map(s => (
               <div key={s.label} style={{ background: s.featured ? '#063D2A' : '#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
                 <div style={{ fontSize:11, fontWeight:600, color: s.featured ? '#ffffff60' : '#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:8 }}>{s.label}</div>
@@ -236,7 +315,7 @@ const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const no
                 reservasHoy.map(r => (
                   <AptRow
                     key={r.id}
-                    nombre={r.clientes?.nombre || 'Cliente'}
+                    nombre={r.clientes?.nombre    || 'Cliente'}
                     servicio={r.servicios?.nombre || 'Servicio'}
                     empleado={r.empleados?.nombre || 'Empleado'}
                     hora_inicio={r.hora_inicio?.slice(0,5)}
@@ -266,7 +345,7 @@ const hoyStr = hoyStrRaw.charAt(0).toUpperCase() + hoyStrRaw.slice(1);  const no
                   empleados.map(e => (
                     <div key={e.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #EAF5EF' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:500, color:'#0B1E16' }}>
-                        <div style={{ width:8, height:8, borderRadius:'50%', background: e.color || '#0A9E6E' }} />
+                        <div style={{ width:8, height:8, borderRadius:'50%', background:e.color||'#0A9E6E' }}/>
                         {e.nombre}
                       </div>
                       <div style={{ fontSize:11, color:'#6B9080' }}>activo</div>
