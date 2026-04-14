@@ -6,9 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-export const config = {
-  api: { bodyParser: false },
-};
+
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
