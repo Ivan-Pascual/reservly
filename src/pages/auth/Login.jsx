@@ -59,7 +59,6 @@ export default function Login() {
     transition:'border-color 0.15s',
   };
 
-  // Pantalla de registro OK
   if (registroOk) return (
     <div style={{ minHeight:'100vh', background:'#F4FAF7', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ width:'100%', maxWidth:420, textAlign:'center' }}>
@@ -81,7 +80,7 @@ export default function Login() {
   );
 
   return (
-    <div style={{ minHeight:'100vh', background:'#F4FAF7', display:'flex', flexDirection:'column' }}>
+    <div style={{ minHeight:'100vh', background:'#F4FAF7', display:'grid', gridTemplateRows:'auto 1fr' }}>
 
       {/* Nav mínima */}
       <div style={{ padding:'16px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -101,10 +100,9 @@ export default function Login() {
       </div>
 
       {/* Contenido centrado */}
-      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px' }}>
         <div style={{ width:'100%', maxWidth:420 }}>
 
-          {/* Logo y tagline */}
           <div style={{ textAlign:'center', marginBottom:28 }}>
             <h1 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:6 }}>
               {modo === 'login' ? 'Bienvenido de nuevo' : 'Empieza gratis hoy'}
@@ -116,14 +114,13 @@ export default function Login() {
             </p>
           </div>
 
-          {/* Card */}
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:16, padding:'28px 24px', boxShadow:'0 4px 24px rgba(10,158,110,0.06)' }}>
 
             {/* Tabs */}
             <div style={{ display:'flex', marginBottom:24, background:'#F4FAF7', borderRadius:10, padding:4 }}>
               {[
-                { k:'login',   label:'Iniciar sesión' },
-                { k:'registro',label:'Registrarse' },
+                { k:'login',    label:'Iniciar sesión' },
+                { k:'registro', label:'Registrarse'    },
               ].map(m => (
                 <button key={m.k} onClick={() => { setModo(m.k); setError(''); }} style={{
                   flex:1, padding:'8px 0', border:'none', borderRadius:8,
@@ -145,8 +142,7 @@ export default function Login() {
                     Nombre del negocio
                   </label>
                   <input value={negocio} onChange={e=>setNegocio(e.target.value)}
-                    placeholder="Ej: Peluquería Mía"
-                    style={input}
+                    placeholder="Ej: Peluquería Mía" style={input}
                     onFocus={e=>e.target.style.borderColor='#0A9E6E'}
                     onBlur={e=>e.target.style.borderColor='#D6EDE5'}/>
                 </div>
@@ -157,8 +153,7 @@ export default function Login() {
                   Email
                 </label>
                 <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  style={input}
+                  placeholder="tu@email.com" style={input}
                   onFocus={e=>e.target.style.borderColor='#0A9E6E'}
                   onBlur={e=>e.target.style.borderColor='#D6EDE5'}/>
               </div>
@@ -181,8 +176,7 @@ export default function Login() {
                   )}
                 </div>
                 <input type="password" value={password} onChange={e=>setPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  style={input}
+                  placeholder="Mínimo 6 caracteres" style={input}
                   onFocus={e=>e.target.style.borderColor='#0A9E6E'}
                   onBlur={e=>e.target.style.borderColor='#D6EDE5'}
                   onKeyDown={e=>e.key==='Enter' && handleSubmit()}/>
@@ -218,7 +212,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Trust badges */}
           <div style={{ display:'flex', justifyContent:'center', gap:20, marginTop:20, flexWrap:'wrap' }}>
             {['✓ Gratis para empezar', '✓ Sin tarjeta', '✓ Cancela cuando quieras'].map(t => (
               <span key={t} style={{ fontSize:12, color:'#A8C4B8', fontWeight:500 }}>{t}</span>

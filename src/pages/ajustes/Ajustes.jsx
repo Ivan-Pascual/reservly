@@ -32,6 +32,7 @@ export default function Ajustes() {
   const [googleCargando, setGoogleCargando] = useState(false);
   const [googleMsg, setGoogleMsg] = useState('');
   const [sincronizando, setSincronizando] = useState(false);
+  const [iniciandoPago, setIniciandoPago] = useState(false);
 
   const [info, setInfo] = useState({
     nombre:'', telefono:'', email:'', direccion:'', slug:'',
@@ -149,6 +150,28 @@ export default function Ajustes() {
     setTimeout(() => setSaved(false), 2500);
   };
 
+  const iniciarPago = async () => {
+    setIniciandoPago(true);
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          negocioId:     negocio.id,
+          email:         negocio.email || '',
+          nombreNegocio: negocio.nombre || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert('Error al iniciar el pago. Inténtalo de nuevo.');
+    } catch (err) {
+      console.error('Stripe error:', err);
+      alert('Error al conectar con el sistema de pagos.');
+    }
+    setIniciandoPago(false);
+  };
+
   const set = k => v => setCfg(p => ({ ...p, [k]: v }));
 
   const inputStyle = {
@@ -233,7 +256,7 @@ export default function Ajustes() {
         </div>
       </div>
 
-      {/* Grid — 1 col en móvil, 2 en desktop */}
+      {/* Grid */}
       <div style={{ padding:pad, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:20 }}>
 
         {/* ── Col izquierda ── */}
@@ -241,7 +264,7 @@ export default function Ajustes() {
           <Section title="Información del negocio">
             {[
               { key:'nombre',    label:'Nombre del negocio' },
-              { key:'slug',      label:'URL pública', prefix:'reservly.com/', mono:true },
+              { key:'slug',      label:'URL pública', prefix:'getreservly.com/reservar/', mono:true },
               { key:'telefono',  label:'Teléfono', mono:true },
               { key:'email',     label:'Email de contacto', type:'email' },
               { key:'direccion', label:'Dirección' },
@@ -250,7 +273,7 @@ export default function Ajustes() {
                 <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:5 }}>{f.label}</div>
                 {f.prefix ? (
                   <div style={{ display:'flex', border:'1.5px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
-                    <span style={{ padding:'8px 10px', background:'#EAF5EF', fontSize:12, color:'#6B9080', borderRight:'1px solid #D6EDE5', whiteSpace:'nowrap' }}>{f.prefix}</span>
+                    <span style={{ padding:'8px 10px', background:'#EAF5EF', fontSize:11, color:'#6B9080', borderRight:'1px solid #D6EDE5', whiteSpace:'nowrap' }}>{f.prefix}</span>
                     <input value={info[f.key]} onChange={e => setInfo({...info, [f.key]:e.target.value})}
                       onBlur={() => setInfo(p => ({...p, slug: slugificar(p.slug)}))}
                       style={{ flex:1, padding:'8px 10px', border:'none', outline:'none', fontSize:13, fontFamily:'DM Mono, monospace', background:'#F4FAF7', minWidth:0 }}/>
@@ -329,18 +352,30 @@ export default function Ajustes() {
             <div style={{ height:4 }}/>
           </Section>
 
+          {/* Plan y suscripción con Stripe */}
           <Section title="Plan y suscripción">
             <div style={{ padding:'14px 0' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12, flexWrap:'wrap', gap:8 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, flexWrap:'wrap', gap:8 }}>
                 <div>
                   <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>Plan Solo</div>
-                  <div style={{ fontSize:12, color:'#6B9080' }}>19 EUR/mes · Prueba gratuita activa</div>
+                  <div style={{ fontSize:12, color:'#6B9080' }}>19 EUR/mes · Gratis durante el lanzamiento</div>
                 </div>
                 <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#E8F7F2', color:'#063D2A' }}>● Activo</span>
               </div>
-              <button style={{ width:'100%', padding:10, background:'#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                Cambiar plan
+              <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
+                {['Reservas online ilimitadas','Gestión de clientes','TPV y stock','Google Calendar sync','Notificaciones push','PWA instalable','Hasta 3 empleados'].map((f, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#0B1E16' }}>
+                    <span style={{ color:'#0A9E6E', fontWeight:700 }}>✓</span>{f}
+                  </div>
+                ))}
+              </div>
+              <button onClick={iniciarPago} disabled={iniciandoPago}
+                style={{ width:'100%', padding:10, background: iniciandoPago ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor: iniciandoPago ? 'not-allowed' : 'pointer' }}>
+                {iniciandoPago ? 'Redirigiendo a Stripe...' : 'Activar plan — 19 EUR/mes →'}
               </button>
+              <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:10, textAlign:'center' }}>
+                Sin permanencia · Cancela cuando quieras · Pago seguro con Stripe
+              </div>
             </div>
           </Section>
 
