@@ -58,7 +58,6 @@ export default function Landing() {
         .feature-card:hover { background:#E8F7F2; border-color:#0A9E6E; transform:translateY(-4px); box-shadow:0 12px 32px rgba(10,158,110,0.12); }
         .nav-link { font-size:14px; font-weight:500; color:#6B9080; text-decoration:none; transition:color 0.15s; }
         .nav-link:hover { color:#0A9E6E; }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
         @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
         .fade-up { animation: fadeUp 0.7s ease forwards; }
         .fade-up-2 { animation: fadeUp 0.7s 0.15s ease both; }
@@ -82,10 +81,10 @@ export default function Landing() {
           <a href="#features" className="nav-link">Funciones</a>
           <a href="#precios" className="nav-link">Precios</a>
           <div style={{ display:'flex', gap:8, marginLeft:8 }}>
-            <button onClick={() => navigate('/login')} className="btn-secondary" style={{ padding:'8px 18px', fontSize:13 }}>
+            <button onClick={() => navigate('/dashboard')} className="btn-secondary" style={{ padding:'8px 18px', fontSize:13 }}>
               Entrar
             </button>
-            <button onClick={() => navigate('/login')} className="btn-primary" style={{ padding:'8px 18px', fontSize:13 }}>
+            <button onClick={() => navigate('/dashboard')} className="btn-primary" style={{ padding:'8px 18px', fontSize:13 }}>
               Empezar gratis
             </button>
           </div>
@@ -94,8 +93,6 @@ export default function Landing() {
 
       {/* Hero */}
       <section ref={heroRef} style={{ minHeight:'92vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:'80px 6vw 60px', background:'linear-gradient(180deg, #F4FAF7 0%, #fff 100%)', position:'relative', overflow:'hidden' }}>
-
-        {/* Decoración fondo */}
         <div style={{ position:'absolute', top:-100, right:-150, width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(10,158,110,0.08) 0%, transparent 70%)', pointerEvents:'none' }}/>
         <div style={{ position:'absolute', bottom:-80, left:-100, width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(6,61,42,0.06) 0%, transparent 70%)', pointerEvents:'none' }}/>
 
@@ -118,7 +115,7 @@ export default function Landing() {
         </p>
 
         <div className="fade-up-4" style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginBottom:48 }}>
-          <button onClick={() => navigate('/login')} className="btn-primary" style={{ fontSize:16, padding:'16px 32px' }}>
+          <button onClick={() => navigate('/dashboard')} className="btn-primary" style={{ fontSize:16, padding:'16px 32px' }}>
             Empieza gratis — sin tarjeta →
           </button>
           <button onClick={() => navigate('/demo')} className="btn-secondary" style={{ fontSize:16, padding:'16px 32px' }}>
@@ -126,7 +123,6 @@ export default function Landing() {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="fade-up-4" style={{ display:'flex', gap:'4vw', justifyContent:'center', flexWrap:'wrap' }}>
           {[
             { valor:'5 min', label:'para configurar' },
@@ -145,18 +141,15 @@ export default function Landing() {
       <section style={{ background:'#063D2A', padding:'60px 6vw', overflow:'hidden' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
           <div style={{ background:'#0A2E1F', borderRadius:20, border:'1px solid rgba(255,255,255,0.08)', overflow:'hidden', boxShadow:'0 40px 80px rgba(0,0,0,0.4)' }}>
-            {/* Barra de navegador falsa */}
             <div style={{ background:'#0B1E16', padding:'12px 16px', display:'flex', alignItems:'center', gap:8 }}>
               <div style={{ width:10, height:10, borderRadius:'50%', background:'#EF4444' }}/>
               <div style={{ width:10, height:10, borderRadius:'50%', background:'#F59E0B' }}/>
               <div style={{ width:10, height:10, borderRadius:'50%', background:'#22C55E' }}/>
               <div style={{ flex:1, background:'rgba(255,255,255,0.06)', borderRadius:6, padding:'4px 12px', marginLeft:8, fontSize:11.5, color:'rgba(255,255,255,0.3)', fontFamily:'DM Mono, monospace' }}>
-                reservly.app/dashboard
+                getreservly.com/dashboard
               </div>
             </div>
-            {/* Dashboard simulado */}
             <div style={{ display:'flex', minHeight:400 }}>
-              {/* Sidebar mini */}
               <div style={{ width:180, background:'#063D2A', padding:'20px 12px', flexShrink:0 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:24, padding:'0 8px' }}>
                   <div style={{ width:20, height:20, borderRadius:4, background:'#0A9E6E' }}/>
@@ -168,7 +161,6 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              {/* Contenido */}
               <div style={{ flex:1, padding:20, background:'#F4FAF7' }}>
                 <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:16 }}>Buenos días, Peluquería ✨</div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
@@ -187,9 +179,9 @@ export default function Landing() {
                 <div style={{ background:'#fff', borderRadius:10, padding:14, border:'1px solid #EAF5EF' }}>
                   <div style={{ fontSize:12, fontWeight:700, color:'#0B1E16', marginBottom:10 }}>Agenda de hoy</div>
                   {[
-                    { n:'Carmen López', s:'Corte y peinado', h:'09:00', c:'#0A9E6E' },
-                    { n:'Ana Martínez', s:'Tinte', h:'10:30', c:'#3B82F6' },
-                    { n:'Rosa Fernández', s:'Manicura', h:'12:00', c:'#F59E0B' },
+                    { n:'Carmen López',   s:'Corte y peinado', h:'09:00', c:'#0A9E6E' },
+                    { n:'Ana Martínez',   s:'Tinte',           h:'10:30', c:'#3B82F6' },
+                    { n:'Rosa Fernández', s:'Manicura',         h:'12:00', c:'#F59E0B' },
                   ].map((r, i) => (
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom: i<2?'1px solid #EAF5EF':'none' }}>
                       <div style={{ width:3, height:28, borderRadius:2, background:r.c, flexShrink:0 }}/>
@@ -266,7 +258,6 @@ export default function Landing() {
             </p>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-            {/* Plan gratuito lanzamiento */}
             <div style={{ background:'#F4FAF7', border:'1px solid #EAF5EF', borderRadius:20, padding:'36px 32px' }}>
               <div style={{ fontSize:13, fontWeight:700, color:'#6B9080', marginBottom:6, textTransform:'uppercase', letterSpacing:'1px' }}>Lanzamiento</div>
               <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:8 }}>
@@ -281,11 +272,10 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => navigate('/login')} className="btn-secondary" style={{ width:'100%', justifyContent:'center', fontSize:14 }}>
+              <button onClick={() => navigate('/dashboard')} className="btn-secondary" style={{ width:'100%', justifyContent:'center', fontSize:14 }}>
                 Empezar gratis →
               </button>
             </div>
-            {/* Plan pro futuro */}
             <div style={{ background:'#063D2A', border:'none', borderRadius:20, padding:'36px 32px', position:'relative', overflow:'hidden' }}>
               <div style={{ position:'absolute', top:16, right:16, background:'#0A9E6E', color:'#fff', fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:20 }}>PRÓXIMAMENTE</div>
               <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.5)', marginBottom:6, textTransform:'uppercase', letterSpacing:'1px' }}>Pro</div>
@@ -321,7 +311,7 @@ export default function Landing() {
             Configura en 5 minutos y comparte tu enlace de reservas. Tus clientes empezarán a reservar hoy mismo.
           </p>
           <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginBottom:24 }}>
-            <button onClick={() => navigate('/login')} className="btn-primary" style={{ fontSize:16, padding:'16px 36px', background:'#0A9E6E' }}>
+            <button onClick={() => navigate('/dashboard')} className="btn-primary" style={{ fontSize:16, padding:'16px 36px', background:'#0A9E6E' }}>
               Crear mi cuenta gratis →
             </button>
             <button onClick={() => navigate('/demo')} className="btn-secondary" style={{ fontSize:16, padding:'16px 28px', color:'rgba(255,255,255,0.8)', borderColor:'rgba(255,255,255,0.2)' }}>
@@ -345,13 +335,13 @@ export default function Landing() {
         </div>
         <div style={{ display:'flex', gap:24 }}>
           {['Privacidad','Términos','Contacto'].map(l => (
-  <a key={l} href={l==='Privacidad' ? '/privacidad' : l==='Términos' ? '/terminos' : 'mailto:hola@getreservly.com'}
-    style={{ fontSize:13, color:'rgba(255,255,255,0.35)', textDecoration:'none', transition:'color 0.15s' }}
-    onMouseEnter={e=>e.target.style.color='rgba(255,255,255,0.8)'}
-    onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.35)'}>
-    {l}
-  </a>
-))}
+            <a key={l} href={l==='Privacidad' ? '/privacidad' : l==='Términos' ? '/terminos' : 'mailto:hola@getreservly.com'}
+              style={{ fontSize:13, color:'rgba(255,255,255,0.35)', textDecoration:'none', transition:'color 0.15s' }}
+              onMouseEnter={e=>e.target.style.color='rgba(255,255,255,0.8)'}
+              onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.35)'}>
+              {l}
+            </a>
+          ))}
         </div>
       </footer>
 
