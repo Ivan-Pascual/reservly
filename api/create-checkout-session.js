@@ -6,10 +6,9 @@ module.exports = async (req, res) => {
   const { negocioId, email, nombreNegocio } = req.body;
 
   try {
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       payment_method_types: ['card'],
       mode: 'subscription',
-      customer_email: email,
       metadata: { negocio_id: negocioId },
       line_items: [{
         price_data: {
@@ -25,8 +24,14 @@ module.exports = async (req, res) => {
       }],
       success_url: `${process.env.REACT_APP_BASE_URL}/dashboard?pago=ok`,
       cancel_url:  `${process.env.REACT_APP_BASE_URL}/ajustes?pago=cancelado`,
-    });
+    };
 
+    // Solo añadir email si es válido
+    if (email && email.includes('@')) {
+      sessionParams.customer_email = email;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
     res.status(200).json({ url: session.url });
   } catch (err) {
     console.error('Stripe error:', err);
