@@ -38,8 +38,9 @@ html, body {
   color: var(--ink);
   font-size: 14px;
   line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
+-webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;}
 
 button { font-family: 'DM Sans', sans-serif; cursor: pointer; }
 input, select, textarea { font-family: 'DM Sans', sans-serif; }
