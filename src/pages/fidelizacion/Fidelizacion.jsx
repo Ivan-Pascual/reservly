@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import PlanGate from '../../components/PlanGate';
+import { usePlan } from '../../hooks/usePlan';
 
 const SELLOS_PARA_PREMIO = 10;
 
@@ -111,7 +113,10 @@ export default function Fidelizacion() {
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
     </div>
   );
+const { puede } = usePlan();
 
+// justo antes del return principal añade:
+if (!puede('fidelizacion')) return <PlanGate feature="fidelizacion" planRequerido="pro" />;
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 

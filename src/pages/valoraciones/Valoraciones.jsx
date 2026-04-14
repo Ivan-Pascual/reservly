@@ -84,6 +84,9 @@ export default function Valoraciones() {
     </div>
   );
 
+
+  const { puede } = usePlan();
+if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />;
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 

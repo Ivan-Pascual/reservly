@@ -68,6 +68,9 @@ export default function Comisiones() {
     </div>
   );
 
+
+  const { puede } = usePlan();
+if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="pro" />;
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 

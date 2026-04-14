@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
-
+import PlanGate from '../../components/PlanGate';
+import { usePlan } from '../../hooks/usePlan';
 const TIPO_BONO = {
   sesiones: { label:'Pack de sesiones', bg:'#E8F7F2', color:'#063D2A', emoji:'🎯' },
   importe:  { label:'Bono de importe',  bg:'#F5F3FF', color:'#5B21B6', emoji:'💶' },
@@ -122,6 +123,8 @@ export default function Bonos() {
     </div>
   );
 
+  const { puede } = usePlan();
+if (!puede('bonos')) return <PlanGate feature="bonos" planRequerido="pro" />;
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
