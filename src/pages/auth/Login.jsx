@@ -80,65 +80,65 @@ export default function Login() {
   );
 
   return (
-    <div style={{ minHeight:'100vh', background:'#F4FAF7', display:'grid', gridTemplateRows:'auto 1fr' }}>
+    <div style={{ minHeight:'100vh', background:'#F4FAF7', display:'flex', flexDirection:'column' }}>
 
       {/* Nav mínima */}
-      <div style={{ padding:'16px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ padding:'16px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
         <div onClick={() => navigate('/')} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
-          <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+          <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
             <path d="M10 42L10 8C10 5 12 4 14 4L28 4C38 4 44 10 44 18C44 26 38 32 28 32L10 32M21 32L44 42"
               stroke="#0A9E6E" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
             <circle cx="21" cy="32" r="4.5" fill="#0A9E6E"/>
             <circle cx="21" cy="32" r="2.2" fill="#F4FAF7"/>
           </svg>
-          <span style={{ fontSize:17, fontWeight:700, color:'#063D2A' }}>Reservly</span>
+          <span style={{ fontSize:20, fontWeight:800, color:'#063D2A', letterSpacing:-0.5 }}>Reservly</span>
         </div>
         <button onClick={() => navigate('/demo')}
-          style={{ background:'transparent', border:'1px solid #D6EDE5', color:'#6B9080', padding:'7px 14px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+          style={{ background:'transparent', border:'1px solid #D6EDE5', color:'#6B9080', padding:'7px 16px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
           Ver demo →
         </button>
       </div>
 
       {/* Contenido centrado */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px' }}>
-        <div style={{ width:'100%', maxWidth:420 }}>
+      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px' }}>
+        <div style={{ width:'100%', maxWidth:440 }}>
 
-          <div style={{ textAlign:'center', marginBottom:28 }}>
-            <h1 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:6 }}>
+          <div style={{ textAlign:'center', marginBottom:24 }}>
+            <h1 style={{ fontSize:'clamp(24px,4vw,32px)', fontWeight:800, color:'#0B1E16', marginBottom:8, letterSpacing:-0.5 }}>
               {modo === 'login' ? 'Bienvenido de nuevo' : 'Empieza gratis hoy'}
             </h1>
-            <p style={{ fontSize:14, color:'#6B9080' }}>
+            <p style={{ fontSize:14, color:'#6B9080', margin:0 }}>
               {modo === 'login'
                 ? 'Accede a tu panel de reservas'
                 : 'Configura tu negocio en menos de 5 minutos'}
             </p>
           </div>
 
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:16, padding:'28px 24px', boxShadow:'0 4px 24px rgba(10,158,110,0.06)' }}>
+          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:20, padding:'28px 28px', boxShadow:'0 8px 40px rgba(10,158,110,0.08)' }}>
 
             {/* Tabs */}
-            <div style={{ display:'flex', marginBottom:24, background:'#F4FAF7', borderRadius:10, padding:4 }}>
+            <div style={{ display:'flex', marginBottom:24, background:'#F4FAF7', borderRadius:12, padding:4 }}>
               {[
                 { k:'login',    label:'Iniciar sesión' },
                 { k:'registro', label:'Registrarse'    },
               ].map(m => (
                 <button key={m.k} onClick={() => { setModo(m.k); setError(''); }} style={{
-                  flex:1, padding:'8px 0', border:'none', borderRadius:8,
+                  flex:1, padding:'9px 0', border:'none', borderRadius:9,
                   background: modo===m.k ? '#fff' : 'transparent',
                   color: modo===m.k ? '#0B1E16' : '#6B9080',
                   fontWeight: modo===m.k ? 700 : 500,
-                  fontSize:13.5, cursor:'pointer',
-                  boxShadow: modo===m.k ? '0 1px 4px rgba(10,158,110,0.15)' : 'none',
+                  fontSize:14, cursor:'pointer',
+                  boxShadow: modo===m.k ? '0 1px 6px rgba(10,158,110,0.12)' : 'none',
                   fontFamily:'DM Sans, sans-serif', transition:'all 0.15s',
                 }}>{m.label}</button>
               ))}
             </div>
 
-            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
               {modo === 'registro' && (
                 <div>
-                  <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:5 }}>
+                  <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', display:'block', marginBottom:6 }}>
                     Nombre del negocio
                   </label>
                   <input value={negocio} onChange={e=>setNegocio(e.target.value)}
@@ -149,7 +149,7 @@ export default function Login() {
               )}
 
               <div>
-                <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:5 }}>
+                <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', display:'block', marginBottom:6 }}>
                   Email
                 </label>
                 <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
@@ -159,8 +159,8 @@ export default function Login() {
               </div>
 
               <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
-                  <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                  <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px' }}>
                     Contraseña
                   </label>
                   {modo === 'login' && (
@@ -189,7 +189,7 @@ export default function Login() {
               )}
 
               <button onClick={handleSubmit} disabled={loading}
-                style={{ width:'100%', padding:'13px 0', background: loading ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif', marginTop:4, transition:'background 0.15s' }}>
+                style={{ width:'100%', padding:'14px 0', background: loading ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans, sans-serif', transition:'background 0.15s' }}>
                 {loading ? 'Cargando...' : modo==='login' ? 'Entrar al panel →' : 'Crear cuenta gratis →'}
               </button>
 
@@ -198,13 +198,13 @@ export default function Login() {
             <div style={{ textAlign:'center', marginTop:16, fontSize:13, color:'#6B9080' }}>
               {modo === 'login' ? (
                 <>¿No tienes cuenta?{' '}
-                  <span onClick={() => { setModo('registro'); setError(''); }} style={{ color:'#0A9E6E', fontWeight:600, cursor:'pointer' }}>
+                  <span onClick={() => { setModo('registro'); setError(''); }} style={{ color:'#0A9E6E', fontWeight:700, cursor:'pointer' }}>
                     Regístrate gratis
                   </span>
                 </>
               ) : (
                 <>¿Ya tienes cuenta?{' '}
-                  <span onClick={() => { setModo('login'); setError(''); }} style={{ color:'#0A9E6E', fontWeight:600, cursor:'pointer' }}>
+                  <span onClick={() => { setModo('login'); setError(''); }} style={{ color:'#0A9E6E', fontWeight:700, cursor:'pointer' }}>
                     Iniciar sesión
                   </span>
                 </>
@@ -221,5 +221,4 @@ export default function Login() {
         </div>
       </div>
     </div>
-  );
-}
+  )};
