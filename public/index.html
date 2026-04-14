@@ -2,17 +2,19 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#063D2A" />
 
-    <!-- SEO básico -->
+    <!-- SEO -->
     <meta name="description" content="Reservly — Gestiona las reservas de tu negocio en piloto automático. Citas online 24/7, TPV, stock, clientes y estadísticas. Gratis para empezar." />
     <meta name="keywords" content="reservas online, gestión citas, software peluquería, agenda online, booking, reservly" />
     <meta name="author" content="Reservly" />
     <meta name="robots" content="index, follow" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://getreservly.com/" />
     <meta property="og:title" content="Reservly — Tus citas, en piloto automático" />
@@ -30,7 +32,6 @@
 
     <!-- PWA -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.svg" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -41,12 +42,22 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <title>Reservly — Tus citas, en piloto automático</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   </head>
   <body>
-    <noscript>Necesitas activar JavaScript para usar Reservly.</noscript>
+    <noscript>
+      <div style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#F4FAF7;min-height:100vh">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="margin-bottom:16px">
+          <path d="M10 42L10 8C10 5 12 4 14 4L28 4C38 4 44 10 44 18C44 26 38 32 28 32L10 32M21 32L44 42" stroke="#0A9E6E" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="21" cy="32" r="4.5" fill="#0A9E6E"/>
+        </svg>
+        <h1 style="color:#063D2A;font-size:24px;margin-bottom:8px">Reservly</h1>
+        <p style="color:#6B9080;font-size:15px;max-width:400px;margin:0 auto">Para usar Reservly necesitas activar JavaScript en tu navegador.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
   </body>
 </html>

@@ -1,12 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+const rootElement = document.getElementById('root');
 
-// Check de conexión — avisa si Supabase no responde
+if (rootElement.hasChildNodes()) {
+  ReactDOM.hydrateRoot(rootElement, <App />);
+} else {
+  ReactDOM.createRoot(rootElement).render(<App />);
+}
+
 window.addEventListener('online',  () => console.log('Conexión restaurada'));
 window.addEventListener('offline', () => {
   const banner = document.createElement('div');
