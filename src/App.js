@@ -18,6 +18,7 @@ import Admin from './pages/admin/Admin';
 import Ajustes from './pages/ajustes/Ajustes';
 import TPV from './pages/tpv/TPV';
 import Landing from './pages/landing/Landing';
+import PagoCancelado from './pages/pago/PagoCancelado';
 import Vacaciones from './pages/vacaciones/Vacaciones';
 import Bonos from './pages/bonos/Bonos';
 import Valoraciones from './pages/valoraciones/Valoraciones';
@@ -172,6 +173,7 @@ export default function App() {
                   <Route path="/stock"               element={<Stock />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
                   <Route path="/pago/exito" element={<PagoExito />} />
+                  <Route path="/pago/cancelado" element={<PagoCancelado />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>

@@ -60,6 +60,16 @@ export default function Dashboard() {
   const [horaActual, setHoraActual] = useState(new Date());
   const [notas, setNotas] = useState([]);
   const [notaInput, setNotaInput] = useState('');
+  const [pagoExitoso, setPagoExitoso] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('pago') === 'ok') {
+      setPagoExitoso(true);
+      setTimeout(() => setPagoExitoso(false), 6000);
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => setHoraActual(new Date()), 60000);
@@ -206,6 +216,21 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Banner pago exitoso */}
+      {pagoExitoso && (
+        <div style={{ background:'#063D2A', padding:'14px 24px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#0A9E6E', flexShrink:0, boxShadow:'0 0 0 3px rgba(10,158,110,0.3)' }}/>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>¡Plan Solo activado correctamente!</div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)' }}>Recibirás la confirmación por email. Ya tienes acceso a todas las funciones.</div>
+          </div>
+          <button onClick={() => setPagoExitoso(false)}
+            style={{ background:'transparent', border:'none', color:'rgba(255,255,255,0.5)', fontSize:18, cursor:'pointer', padding:'0 4px' }}>
+            ✕
+          </button>
+        </div>
+      )}
+
       <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:16 }}>
 
         {/* Cita en curso */}
@@ -275,7 +300,7 @@ export default function Dashboard() {
             <div onClick={() => window.open(`/reservar/${slug}`, '_blank')}
               style={{ display:'flex', alignItems:'center', gap:6, background:'#E8F7F2', border:'1px solid #D6EDE5', color:'#063D2A', fontSize:12, fontWeight:600, padding:'6px 12px', borderRadius:20, cursor:'pointer', whiteSpace:'nowrap' }}>
               <span style={{ width:7, height:7, background:'#0A9E6E', borderRadius:'50%', display:'inline-block' }}/>
-              {isMobile ? 'Ver página pública' : `reservly.com/${slug}`}
+              {isMobile ? 'Ver página pública' : `getreservly.com/reservar/${slug}`}
             </div>
           )}
         </div>

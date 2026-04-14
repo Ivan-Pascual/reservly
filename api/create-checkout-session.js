@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
         quantity: 1,
       }],
       success_url: `${process.env.REACT_APP_BASE_URL}/pago/exito`,
-      cancel_url:  `${process.env.REACT_APP_BASE_URL}/ajustes?pago=cancelado`,
+      cancel_url: `${process.env.REACT_APP_BASE_URL}/pago/cancelado`,
     };
 
     // Solo añadir email si es válido
