@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
 import Layout from './components/layout/Layout';
 import Login from './pages/auth/Login';
@@ -52,6 +52,7 @@ function TituloManager() {
   }, [location]);
   return null;
 }
+
 function NotFound() {
   const navigate = useNavigate();
   return (
@@ -132,15 +133,23 @@ export default function App() {
         <TituloManager />
         <Routes>
 
-          {/* Rutas públicas — sin login */}
-          <Route path="/" element={session ? <Navigate to="/dashboard" replace /> : <Landing />} />
-          <Route path="/landing" element={<Landing />} />
-          <Route path="/demo" element={<Demo />} />
+          {/* Rutas 100% públicas — sin login nunca */}
+          <Route path="/"          element={session ? <Navigate to="/dashboard" replace /> : <Landing />} />
+          <Route path="/landing"   element={<Landing />} />
+          <Route path="/demo"      element={<Demo />} />
+          <Route path="/privacidad" element={<Privacidad />} />
+          <Route path="/terminos"  element={<Terminos />} />
           <Route path="/reservar/:slug" element={<PaginaPublica />} />
+
+          {/* Login — ruta pública */}
+          <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
+
+          {/* Admin — fuera del Layout */}
+          <Route path="/admin" element={<Admin />} />
 
           {/* Rutas privadas */}
           <Route path="/*" element={
-            !session ? <Navigate to="/" replace /> :
+            !session ? <Navigate to="/login" replace /> :
             (negocio && !negocio.onboarding_completado) ? (
               <Onboarding negocioId={negocio.id} onComplete={() => fetchNegocio(session.user.id)} />
             ) : (
@@ -148,7 +157,6 @@ export default function App() {
                 <Routes>
                   <Route path="/dashboard"           element={<Dashboard />} />
                   <Route path="/reservas"            element={<Reservas />} />
-                  <Route path="/admin" element={<Admin />} />
                   <Route path="/agenda"              element={<Agenda />} />
                   <Route path="/clientes"            element={<Clientes />} />
                   <Route path="/clientes/:id"        element={<FichaCliente />} />
@@ -162,8 +170,6 @@ export default function App() {
                   <Route path="/vacaciones"          element={<Vacaciones />} />
                   <Route path="/stock"               element={<Stock />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
-                  <Route path="/privacidad" element={<Privacidad />} />
-                  <Route path="/terminos" element={<Terminos />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>
