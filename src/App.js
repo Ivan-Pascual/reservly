@@ -29,6 +29,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Stock from './pages/stock/Stock';
 import HistorialStock from './pages/stock/HistorialStock';
 import Demo from './pages/demo/Demo';
+import Fidelizacion from './pages/fidelizacion/Fidelizacion';
 
 const TITULOS = {
   '/dashboard':    'Inicio',
@@ -159,6 +160,7 @@ export default function App() {
                 <Routes>
                   <Route path="/dashboard"           element={<Dashboard />} />
                   <Route path="/reservas"            element={<Reservas />} />
+                  <Route path="/fidelizacion" element={<Fidelizacion />} />
                   <Route path="/agenda"              element={<Agenda />} />
                   <Route path="/clientes"            element={<Clientes />} />
                   <Route path="/clientes/:id"        element={<FichaCliente />} />

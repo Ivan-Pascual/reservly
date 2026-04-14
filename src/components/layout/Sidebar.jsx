@@ -99,13 +99,13 @@ export default function Sidebar({ onClose, onBuscar }) {
             Principal
           </div>
 
-          <NavItem to="/dashboard"  emoji="⊞"  label="Inicio"           onClose={cerrarSidebar} />
-          <NavItem to="/reservas"   emoji="📅"  label="Reservas"         onClose={cerrarSidebar} badge={pendientes} />
-          <NavItem to="/agenda"     emoji="🗓️" label="Agenda semanal"   onClose={cerrarSidebar} />
-          <NavItem to="/clientes"   emoji="👤"  label="Clientes"         onClose={cerrarSidebar} />
-          <NavItem to="/empleados"  emoji="👥"  label="Empleados"        onClose={cerrarSidebar} />
-          <NavItem to="/servicios"  emoji="✂️"  label="Servicios"        onClose={cerrarSidebar} />
-          <NavItem to="/stock"      emoji="📦"  label="Stock"            onClose={cerrarSidebar} />
+          <NavItem to="/dashboard"  emoji="⊞"  label="Inicio"          onClose={cerrarSidebar} />
+          <NavItem to="/reservas"   emoji="📅"  label="Reservas"        onClose={cerrarSidebar} badge={pendientes} />
+          <NavItem to="/agenda"     emoji="🗓️" label="Agenda semanal"  onClose={cerrarSidebar} />
+          <NavItem to="/clientes"   emoji="👤"  label="Clientes"        onClose={cerrarSidebar} />
+          <NavItem to="/empleados"  emoji="👥"  label="Empleados"       onClose={cerrarSidebar} />
+          <NavItem to="/servicios"  emoji="✂️"  label="Servicios"       onClose={cerrarSidebar} />
+          <NavItem to="/stock"      emoji="📦"  label="Stock"           onClose={cerrarSidebar} />
 
           <div style={{ height:1, background:'#ffffff10', margin:'12px 0' }}/>
 
@@ -113,6 +113,7 @@ export default function Sidebar({ onClose, onBuscar }) {
             Gestión
           </div>
 
+          <NavItem to="/fidelizacion" emoji="🏅" label="Fidelización"      onClose={cerrarSidebar} />
           <NavItem to="/comisiones"   emoji="⏱"  label="Comisiones"        onClose={cerrarSidebar} />
           <NavItem to="/vacaciones"   emoji="🏖️" label="Vacaciones"         onClose={cerrarSidebar} />
           <NavItem to="/bonos"        emoji="🎁"  label="Bonos y descuentos" onClose={cerrarSidebar} />
