@@ -178,15 +178,12 @@ export default function PaginaPublica() {
     if (!selServicio || !selFecha) return [];
     const duracion = selServicio.duracion || 45;
     const huecos = [];
-
     const diasMap = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
     const nombreDia = diasMap[selFecha.getDay()];
-
     let inicioMin = 9 * 60;
     let finMin    = 19 * 60;
-
     if (configuracion) {
-      const activo   = configuracion[`horario_${nombreDia}_activo`];
+      const activo = configuracion[`horario_${nombreDia}_activo`];
       if (activo === false) return [];
       const apertura = configuracion[`horario_${nombreDia}_apertura`]?.slice(0,5) || '09:00';
       const cierre   = configuracion[`horario_${nombreDia}_cierre`]?.slice(0,5)   || '19:00';
@@ -195,7 +192,6 @@ export default function PaginaPublica() {
       inicioMin = hIni * 60 + mIni;
       finMin    = hFin * 60 + mFin;
     }
-
     for (let min = inicioMin; min + duracion <= finMin; min += 30) {
       const horaStr    = `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
       const horaFinStr = `${String(Math.floor((min+duracion)/60)).padStart(2,'0')}:${String((min+duracion)%60).padStart(2,'0')}`;
@@ -243,16 +239,13 @@ export default function PaginaPublica() {
       setError('El email no tiene un formato válido.');
       return;
     }
-
     setEnviando(true);
     setError('');
-
     try {
       const hace24h = new Date(Date.now() - 24*60*60*1000).toISOString();
       const { data: clienteSpam } = await supabase
         .from('clientes').select('id')
         .eq('negocio_id', negocio.id).eq('telefono', telLimpio).single();
-
       if (clienteSpam) {
         const { count: reservasCliente } = await supabase
           .from('reservas').select('*', { count:'exact', head:true })
@@ -264,9 +257,7 @@ export default function PaginaPublica() {
           return;
         }
       }
-
       const fechaStr = `${selFecha.getFullYear()}-${String(selFecha.getMonth()+1).padStart(2,'0')}-${String(selFecha.getDate()).padStart(2,'0')}`;
-
       const { data: conflicto } = await supabase
         .from('reservas').select('id')
         .eq('negocio_id', negocio.id).eq('fecha', fechaStr)
@@ -274,18 +265,15 @@ export default function PaginaPublica() {
         .in('estado', ['confirmada','pendiente'])
         .lt('hora_inicio', selHora.horaFin)
         .gt('hora_fin', selHora.hora);
-
       if (conflicto && conflicto.length > 0) {
         setError('Lo sentimos, este hueco ya ha sido reservado. Por favor elige otro horario.');
         setEnviando(false);
         return;
       }
-
       let clienteId = null;
       const { data: clienteExistente } = await supabase
         .from('clientes').select('id')
         .eq('negocio_id', negocio.id).eq('telefono', telLimpio).single();
-
       if (clienteExistente) {
         clienteId = clienteExistente.id;
       } else {
@@ -299,7 +287,6 @@ export default function PaginaPublica() {
           }).select().single();
         if (nuevoCliente) clienteId = nuevoCliente.id;
       }
-
       const { data: reserva, error: resError } = await supabase
         .from('reservas').insert({
           negocio_id:   negocio.id,
@@ -312,9 +299,7 @@ export default function PaginaPublica() {
           estado:       'pendiente',
           precio_final: selServicio.precio,
         }).select().single();
-
       if (resError) throw new Error('Error al crear la reserva.');
-
       if (datosCliente.email) {
         const { data: servicioData } = await supabase
           .from('servicios').select('nombre').eq('id', selServicio.id).single();
@@ -326,14 +311,12 @@ export default function PaginaPublica() {
           empleado: selEmpleado,
         });
       }
-
       pushNotifications.nuevaReserva({
         clienteNombre: datosCliente.nombre,
         servicio:      selServicio?.nombre || 'Servicio',
         fecha:         fechaStr,
         hora:          selHora.hora,
       });
-
       setReservaId(reserva.id);
       setPaso(6);
     } catch (err) {
@@ -355,7 +338,7 @@ export default function PaginaPublica() {
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#F4FAF7', flexDirection:'column', gap:16 }}>
       <div style={{ fontSize:48 }}>🔍</div>
       <div style={{ fontSize:20, fontWeight:700, color:'#0B1E16' }}>Negocio no encontrado</div>
-      <div style={{ fontSize:14, color:'#6B9080' }}>La URL reservly.com/{slug} no existe</div>
+      <div style={{ fontSize:14, color:'#6B9080' }}>La URL getreservly.com/reservar/{slug} no existe</div>
     </div>
   );
 
@@ -410,32 +393,56 @@ export default function PaginaPublica() {
 
         {/* PASO 6: CONFIRMADO */}
         {paso === 6 && (
-          <div style={{ background:'#fff', borderRadius:16, padding:'36px 28px', textAlign:'center' }}>
-            <div style={{ width:68, height:68, borderRadius:'50%', background:'#E8F7F2', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, margin:'0 auto 18px' }}>✓</div>
-            <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:8 }}>{t.confirmada}</h2>
-            <p style={{ fontSize:14, color:'#6B9080', lineHeight:1.6, marginBottom:20 }}>
-              {t.confirmadaDesc} <strong>{negocio.nombre}</strong>.
+          <div style={{ textAlign:'center' }}>
+            <div style={{ width:80, height:80, borderRadius:'50%', background:'#063D2A', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, margin:'0 auto 20px', boxShadow:'0 0 0 8px #E8F7F2' }}>
+              ✓
+            </div>
+            <h2 style={{ fontSize:24, fontWeight:800, color:'#0B1E16', marginBottom:8, letterSpacing:-0.5 }}>{t.confirmada}</h2>
+            <p style={{ fontSize:14, color:'#6B9080', lineHeight:1.7, marginBottom:24 }}>
+              {t.confirmadaDesc} <strong>{negocio.nombre}</strong>.<br/>
+              {datosCliente.email ? 'Te enviaremos un recordatorio por email.' : 'Guarda los detalles de tu cita.'}
             </p>
-            <div style={{ background:'#F4FAF7', borderRadius:12, padding:18, marginBottom:20, textAlign:'left' }}>
+            <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:16, padding:'20px', marginBottom:16, textAlign:'left' }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:14 }}>{t.resumen}</div>
               {[
-                { label: t.servicio,     val: selServicio?.nombre },
-                { label: t.profesional,  val: selEmpleado?.nombre },
-                { label: t.fecha,        val: selFecha ? `${diasSemana[selFecha.getDay()]} ${selFecha.getDate()} ${meses[selFecha.getMonth()]}` : '' },
-                { label: t.hora,         val: selHora?.hora },
+                { label: t.servicio,    val: selServicio?.nombre },
+                { label: t.profesional, val: selEmpleado?.nombre },
+                { label: t.fecha,       val: selFecha ? `${diasSemana[selFecha.getDay()]} ${selFecha.getDate()} ${meses[selFecha.getMonth()]}` : '' },
+                { label: t.hora,        val: selHora?.hora },
+                { label: 'Duración',    val: selServicio?.duracion ? `${selServicio.duracion} min` : null },
+                { label: 'Precio',      val: selServicio?.precio && !selServicio?.precio_a_consultar ? `${selServicio.precio} EUR` : null },
               ].filter(r => r.val).map((r, i, arr) => (
-                <div key={r.label} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom: i<arr.length-1?'1px solid #EAF5EF':'none', fontSize:13 }}>
+                <div key={r.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom: i<arr.length-1 ? '1px solid #EAF5EF' : 'none', fontSize:13 }}>
                   <span style={{ color:'#6B9080' }}>{r.label}</span>
-                  <span style={{ fontWeight:600 }}>{r.val}</span>
+                  <span style={{ fontWeight:600, color:'#0B1E16' }}>{r.val}</span>
                 </div>
               ))}
             </div>
+            {selFecha && selHora && (
+              <a href={(() => {
+                const fechaStr = `${selFecha.getFullYear()}${String(selFecha.getMonth()+1).padStart(2,'0')}${String(selFecha.getDate()).padStart(2,'0')}`;
+                const [hIni, mIni] = selHora.hora.split(':').map(Number);
+                const [hFin, mFin] = selHora.horaFin.split(':').map(Number);
+                const inicio = `${fechaStr}T${String(hIni).padStart(2,'0')}${String(mIni).padStart(2,'0')}00`;
+                const fin    = `${fechaStr}T${String(hFin).padStart(2,'0')}${String(mFin).padStart(2,'0')}00`;
+                return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(selServicio?.nombre + ' en ' + negocio.nombre)}&dates=${inicio}/${fin}&details=${encodeURIComponent('Reserva gestionada con Reservly — getreservly.com')}&location=${encodeURIComponent(negocio.direccion || '')}`;
+              })()}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'13px', background:'#fff', color:'#0B1E16', border:'1.5px solid #D6EDE5', borderRadius:10, fontSize:14, fontWeight:600, textDecoration:'none', marginBottom:10 }}>
+                📅 Añadir a Google Calendar
+              </a>
+            )}
             <button onClick={() => {
               setPaso(0); setSelServicio(null); setSelEmpleado(null);
               setSelFecha(null); setSelHora(null);
               setDatosCliente({ nombre:'', email:'', telefono:'' }); setError('');
-            }} style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'12px 28px', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }}>
+            }} style={{ width:'100%', background:'#0A9E6E', color:'#fff', border:'none', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer', marginBottom:16 }}>
               {t.otraReserva}
             </button>
+            <div style={{ fontSize:12, color:'#A8C4B8', lineHeight:1.6 }}>
+              ¿Necesitas cancelar? Contacta con <strong>{negocio.nombre}</strong>
+              {negocio.telefono ? ` al ${negocio.telefono}` : ''}.
+            </div>
           </div>
         )}
 
@@ -580,7 +587,6 @@ export default function PaginaPublica() {
             <button onClick={() => setPaso(3)} style={{ background:'transparent', border:'none', color:'#6B9080', fontSize:13, cursor:'pointer', marginBottom:16, display:'flex', alignItems:'center', gap:4 }}>{t.volver}</button>
             <h2 style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>{t.tusDatos}</h2>
             <p style={{ fontSize:14, color:'#6B9080', marginBottom:20 }}>{t.paraConfirmar}</p>
-
             <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:12, padding:'12px 16px', marginBottom:20 }}>
               <div style={{ fontSize:13, fontWeight:700, color:'#063D2A', marginBottom:6 }}>{t.resumen}</div>
               <div style={{ fontSize:13, color:'#0B1E16' }}>
@@ -591,12 +597,11 @@ export default function PaginaPublica() {
                 <div style={{ fontSize:14, fontWeight:700, color:'#0A9E6E', marginTop:4, fontFamily:'DM Mono, monospace' }}>{selServicio.precio} EUR</div>
               )}
             </div>
-
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               {[
-                { key:'nombre',   label: t.nombre,   placeholder:'Carmen López', type:'text',  mono:false },
-                { key:'telefono', label: t.telefono,  placeholder:'+34 600 000 000', type:'tel', mono:true  },
-                { key:'email',    label: t.email,     placeholder:'tu@email.com', type:'email', mono:false },
+                { key:'nombre',   label: t.nombre,   placeholder:'Carmen López',    type:'text',  mono:false },
+                { key:'telefono', label: t.telefono,  placeholder:'+34 600 000 000', type:'tel',   mono:true  },
+                { key:'email',    label: t.email,     placeholder:'tu@email.com',    type:'email', mono:false },
               ].map(f => (
                 <div key={f.key}>
                   <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:5 }}>{f.label}</label>
@@ -607,16 +612,13 @@ export default function PaginaPublica() {
                     onBlur={e => e.target.style.borderColor='#D6EDE5'}/>
                 </div>
               ))}
-
               {error && (
                 <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#EF4444' }}>{error}</div>
               )}
-
               <button onClick={confirmarReserva} disabled={enviando}
                 style={{ width:'100%', padding:'14px', background: enviando ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', borderRadius:10, fontSize:15, fontWeight:700, cursor: enviando ? 'not-allowed' : 'pointer', marginTop:4 }}>
                 {enviando ? t.confirmando : t.confirmar}
               </button>
-
               <div style={{ fontSize:12, color:'#A8C4B8', textAlign:'center', lineHeight:1.6 }}>
                 Al confirmar aceptas que {negocio.nombre} guarde tus datos de contacto para gestionar tu reserva, de acuerdo con el RGPD.
               </div>
