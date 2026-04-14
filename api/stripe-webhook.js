@@ -32,17 +32,17 @@ module.exports = async (req, res) => {
   switch (event.type) {
 
     case 'checkout.session.completed': {
-      const negocioId = session.metadata?.negocio_id;
-      if (negocioId) {
-        await supabase.from('negocios').update({
-          plan:                    'solo',
-          stripe_customer_id:      session.customer,
-          stripe_subscription_id:  session.subscription,
-        }).eq('id', negocioId);
-      }
-      break;
-    }
-
+  const negocioId = session.metadata?.negocio_id;
+  const plan = session.metadata?.plan || 'basico';
+  if (negocioId) {
+    await supabase.from('negocios').update({
+      plan,
+      stripe_customer_id:     session.customer,
+      stripe_subscription_id: session.subscription,
+    }).eq('id', negocioId);
+  }
+  break;
+}
     case 'customer.subscription.deleted': {
       const customerId = session.customer;
       await supabase.from('negocios').update({

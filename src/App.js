@@ -22,7 +22,7 @@ import Landing from './pages/landing/Landing';
 import PagoCancelado from './pages/pago/PagoCancelado';
 import Vacaciones from './pages/vacaciones/Vacaciones';
 import Bonos from './pages/bonos/Bonos';
-import PerfilPublico from './pages/perfil/PerfilPublico';
+import PlanExpirado from './pages/planes/PlanExpirado';
 import Valoraciones from './pages/valoraciones/Valoraciones';
 import Estadisticas from './pages/estadisticas/Estadisticas';
 import Agenda from './pages/agenda/Agenda';
@@ -46,6 +46,7 @@ const TITULOS = {
   '/estadisticas': 'Estadísticas',
   '/ajustes':      'Ajustes',
   '/vacaciones':   'Vacaciones',
+  '/fidelizacion': 'Fidelización',
 };
 
 function TituloManager() {
@@ -126,6 +127,10 @@ export default function App() {
     setNegocio(data || null);
   };
 
+  const trialExpirado = negocio?.plan === 'trial' &&
+    negocio?.plan_expiry &&
+    new Date() > new Date(negocio.plan_expiry);
+
   if (session === undefined || negocio === undefined) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#F4FAF7' }}>
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
@@ -138,18 +143,19 @@ export default function App() {
         <TituloManager />
         <Routes>
 
-          {/* Rutas 100% públicas — sin login nunca */}
-          <Route path="/"          element={session ? <Navigate to="/dashboard" replace /> : <Landing />} />
-          <Route path="/landing"   element={<Landing />} />
-          <Route path="/demo"      element={<Demo />} />
-          <Route path="/privacidad" element={<Privacidad />} />
-          <Route path="/terminos"  element={<Terminos />} />
+          {/* Rutas 100% públicas */}
+          <Route path="/"               element={session ? <Navigate to="/dashboard" replace /> : <Landing />} />
+          <Route path="/landing"        element={<Landing />} />
+          <Route path="/demo"           element={<Demo />} />
+          <Route path="/privacidad"     element={<Privacidad />} />
+          <Route path="/terminos"       element={<Terminos />} />
           <Route path="/reservar/:slug" element={<PaginaPublica />} />
+          <Route path="/negocio/:slug"  element={<PerfilPublico />} />
 
-          {/* Login — ruta pública */}
+          {/* Login */}
           <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
 
-          {/* Admin — fuera del Layout */}
+          {/* Admin */}
           <Route path="/admin" element={<Admin />} />
 
           {/* Rutas privadas */}
@@ -157,12 +163,13 @@ export default function App() {
             !session ? <Navigate to="/login" replace /> :
             (negocio && !negocio.onboarding_completado) ? (
               <Onboarding negocioId={negocio.id} onComplete={() => fetchNegocio(session.user.id)} />
+            ) : trialExpirado ? (
+              <PlanExpirado />
             ) : (
               <Layout>
                 <Routes>
                   <Route path="/dashboard"           element={<Dashboard />} />
                   <Route path="/reservas"            element={<Reservas />} />
-                  <Route path="/fidelizacion" element={<Fidelizacion />} />
                   <Route path="/agenda"              element={<Agenda />} />
                   <Route path="/clientes"            element={<Clientes />} />
                   <Route path="/clientes/:id"        element={<FichaCliente />} />
@@ -170,15 +177,15 @@ export default function App() {
                   <Route path="/servicios"           element={<Servicios />} />
                   <Route path="/comisiones"          element={<Comisiones />} />
                   <Route path="/bonos"               element={<Bonos />} />
+                  <Route path="/fidelizacion"        element={<Fidelizacion />} />
                   <Route path="/valoraciones"        element={<Valoraciones />} />
                   <Route path="/estadisticas"        element={<Estadisticas />} />
                   <Route path="/ajustes"             element={<Ajustes />} />
                   <Route path="/vacaciones"          element={<Vacaciones />} />
-                  <Route path="/negocio/:slug" element={<PerfilPublico />} />
-                  <Route path="/negocio/:slug" element={<PerfilPublico />} />
+                  <Route path="/stock"               element={<Stock />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
-                  <Route path="/pago/exito" element={<PagoExito />} />
-                  <Route path="/pago/cancelado" element={<PagoCancelado />} />
+                  <Route path="/pago/exito"          element={<PagoExito />} />
+                  <Route path="/pago/cancelado"      element={<PagoCancelado />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>

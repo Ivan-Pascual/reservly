@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from '../../supabase';
+import { usePlan } from '../../hooks/usePlan';
 
 const ADMIN_EMAIL = 'ivanpascual100@gmail.com';
 
@@ -30,8 +31,10 @@ function NavItem({ to, emoji, label, badge, onClose }) {
 
 export default function Sidebar({ onClose, onBuscar }) {
   const [negocioNombre, setNegocioNombre] = useState('Mi negocio');
+  const [negocioPlan, setNegocioPlan] = useState('trial');
   const [pendientes, setPendientes] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { esTrial, diasRestantes } = usePlan();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,10 +42,11 @@ export default function Sidebar({ onClose, onBuscar }) {
       if (!user) return;
       if (user.email === ADMIN_EMAIL) setIsAdmin(true);
       const { data: negocio } = await supabase
-        .from('negocios').select('id, nombre')
+        .from('negocios').select('id, nombre, plan')
         .eq('user_id', user.id).single();
       if (negocio) {
         setNegocioNombre(negocio.nombre);
+        setNegocioPlan(negocio.plan || 'trial');
         const { count } = await supabase
           .from('reservas').select('*', { count: 'exact', head: true })
           .eq('negocio_id', negocio.id).eq('estado', 'pendiente');
@@ -56,6 +60,13 @@ export default function Sidebar({ onClose, onBuscar }) {
     if (!window.confirm('¿Cerrar sesión? Tendrás que volver a iniciar sesión para acceder al panel.')) return;
     await supabase.auth.signOut();
   };
+
+  const planLabel = {
+    trial:   'Prueba gratuita',
+    basico:  'Plan Básico',
+    pro:     'Plan Pro',
+    agencia: 'Plan Agencia',
+  }[negocioPlan] || 'Plan Básico';
 
   const cerrarSidebar = onClose || (() => {});
 
@@ -113,12 +124,12 @@ export default function Sidebar({ onClose, onBuscar }) {
             Gestión
           </div>
 
-          <NavItem to="/fidelizacion" emoji="🏅" label="Fidelización"      onClose={cerrarSidebar} />
-          <NavItem to="/comisiones"   emoji="⏱"  label="Comisiones"        onClose={cerrarSidebar} />
-          <NavItem to="/vacaciones"   emoji="🏖️" label="Vacaciones"         onClose={cerrarSidebar} />
-          <NavItem to="/bonos"        emoji="🎁"  label="Bonos y descuentos" onClose={cerrarSidebar} />
-          <NavItem to="/valoraciones" emoji="⭐"  label="Valoraciones"       onClose={cerrarSidebar} />
-          <NavItem to="/estadisticas" emoji="📈"  label="Estadísticas"       onClose={cerrarSidebar} />
+          <NavItem to="/fidelizacion" emoji="🏅" label="Fidelización"       onClose={cerrarSidebar} />
+          <NavItem to="/comisiones"   emoji="⏱"  label="Comisiones"         onClose={cerrarSidebar} />
+          <NavItem to="/vacaciones"   emoji="🏖️" label="Vacaciones"          onClose={cerrarSidebar} />
+          <NavItem to="/bonos"        emoji="🎁"  label="Bonos y descuentos"  onClose={cerrarSidebar} />
+          <NavItem to="/valoraciones" emoji="⭐"  label="Valoraciones"        onClose={cerrarSidebar} />
+          <NavItem to="/estadisticas" emoji="📈"  label="Estadísticas"        onClose={cerrarSidebar} />
 
           <div style={{ height:1, background:'#ffffff10', margin:'12px 0' }}/>
 
@@ -134,6 +145,22 @@ export default function Sidebar({ onClose, onBuscar }) {
           <div style={{ height:12 }}/>
         </div>
 
+        {/* Banner trial */}
+        {esTrial && diasRestantes <= 7 && (
+          <div style={{ margin:'0 12px 8px', background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:8, padding:'10px 12px', flexShrink:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#F59E0B', marginBottom:2 }}>
+              ⏰ {diasRestantes} días de prueba
+            </div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', marginBottom:6 }}>
+              Elige un plan para continuar
+            </div>
+            <button onClick={() => window.location.href='/ajustes'}
+              style={{ width:'100%', padding:'6px', background:'#F59E0B', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer' }}>
+              Ver planes →
+            </button>
+          </div>
+        )}
+
         {/* Usuario */}
         <div style={{ padding:'12px 16px 16px', borderTop:'1px solid #ffffff10', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
@@ -142,7 +169,7 @@ export default function Sidebar({ onClose, onBuscar }) {
             </div>
             <div style={{ overflow:'hidden', flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:600, color:'#fff', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{negocioNombre}</div>
-              <div style={{ fontSize:10.5, color:'#0A9E6E', fontWeight:500 }}>Plan Solo · Activo</div>
+              <div style={{ fontSize:10.5, color:'#0A9E6E', fontWeight:500 }}>{planLabel}</div>
             </div>
           </div>
           <button onClick={handleLogout} style={{
