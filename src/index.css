@@ -45,3 +45,6 @@ html, body {
 button { font-family: 'DM Sans', sans-serif; cursor: pointer; }
 input, select, textarea { font-family: 'DM Sans', sans-serif; }
 a { text-decoration: none; color: inherit; }
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: #063D2A; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: #0A9E6E; border-radius: 4px; }

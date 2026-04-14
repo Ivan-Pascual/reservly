@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
         },
         quantity: 1,
       }],
-      success_url: `${process.env.REACT_APP_BASE_URL}/dashboard?pago=ok`,
+      success_url: `${process.env.REACT_APP_BASE_URL}/pago/exito`,
       cancel_url:  `${process.env.REACT_APP_BASE_URL}/ajustes?pago=cancelado`,
     };
 

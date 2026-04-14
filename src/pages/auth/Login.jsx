@@ -101,7 +101,7 @@ export default function Login() {
 
       {/* Contenido centrado */}
       <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 16px' }}>
-        <div style={{ width:'100%', maxWidth:440 }}>
+        <div style={{ width:'100%', maxWidth:420 }}>
 
           <div style={{ textAlign:'center', marginBottom:24 }}>
             <h1 style={{ fontSize:'clamp(24px,4vw,32px)', fontWeight:800, color:'#0B1E16', marginBottom:8, letterSpacing:-0.5 }}>

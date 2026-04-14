@@ -10,6 +10,7 @@ import Clientes from './pages/clientes/Clientes';
 import FichaCliente from './pages/clientes/FichaCliente';
 import Empleados from './pages/empleados/Empleados';
 import Servicios from './pages/servicios/Servicios';
+import PagoExito from './pages/pago/PagoExito';
 import Comisiones from './pages/comisiones/Comisiones';
 import Privacidad from './pages/legal/Privacidad';
 import Terminos from './pages/legal/Terminos';
@@ -170,6 +171,7 @@ export default function App() {
                   <Route path="/vacaciones"          element={<Vacaciones />} />
                   <Route path="/stock"               element={<Stock />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
+                  <Route path="/pago/exito" element={<PagoExito />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>
