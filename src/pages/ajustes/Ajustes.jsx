@@ -287,6 +287,25 @@ export default function Ajustes() {
                 )}
               </div>
             ))}
+            <div style={{ padding:'12px 0' }}>
+  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:8 }}>Tu perfil público</div>
+  <div style={{ display:'flex', gap:8 }}>
+    <div style={{ flex:1, padding:'9px 12px', background:'#F4FAF7', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:11.5, fontFamily:'DM Mono, monospace', color:'#6B9080', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+      getreservly.com/negocio/{negocio?.slug || ''}
+    </div>
+    <button onClick={() => window.open(`https://getreservly.com/negocio/${negocio?.slug}`, '_blank')}
+      style={{ padding:'9px 14px', background:'#063D2A', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', flexShrink:0 }}>
+      Ver →
+    </button>
+    <button onClick={() => {
+      navigator.clipboard.writeText(`https://getreservly.com/negocio/${negocio?.slug}`);
+      alert('URL copiada');
+    }}
+      style={{ padding:'9px 12px', background:'transparent', color:'#6B9080', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', flexShrink:0 }}>
+      Copiar
+    </button>
+  </div>
+</div>
             <div style={{ height:12 }}/>
           </Section>
 

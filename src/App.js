@@ -22,6 +22,7 @@ import Landing from './pages/landing/Landing';
 import PagoCancelado from './pages/pago/PagoCancelado';
 import Vacaciones from './pages/vacaciones/Vacaciones';
 import Bonos from './pages/bonos/Bonos';
+import PerfilPublico from './pages/perfil/PerfilPublico';
 import Valoraciones from './pages/valoraciones/Valoraciones';
 import Estadisticas from './pages/estadisticas/Estadisticas';
 import Agenda from './pages/agenda/Agenda';
@@ -173,6 +174,7 @@ export default function App() {
                   <Route path="/estadisticas"        element={<Estadisticas />} />
                   <Route path="/ajustes"             element={<Ajustes />} />
                   <Route path="/vacaciones"          element={<Vacaciones />} />
+                  <Route path="/negocio/:slug" element={<PerfilPublico />} />
                   <Route path="/negocio/:slug" element={<PerfilPublico />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
                   <Route path="/pago/exito" element={<PagoExito />} />
