@@ -345,12 +345,13 @@ export default function Landing() {
         </div>
         <div style={{ display:'flex', gap:24 }}>
           {['Privacidad','Términos','Contacto'].map(l => (
-            <a key={l} href="#" style={{ fontSize:13, color:'rgba(255,255,255,0.35)', textDecoration:'none', transition:'color 0.15s' }}
-              onMouseEnter={e=>e.target.style.color='rgba(255,255,255,0.8)'}
-              onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.35)'}>
-              {l}
-            </a>
-          ))}
+  <a key={l} href={l==='Privacidad' ? '/privacidad' : l==='Términos' ? '/terminos' : 'mailto:hola@getreservly.com'}
+    style={{ fontSize:13, color:'rgba(255,255,255,0.35)', textDecoration:'none', transition:'color 0.15s' }}
+    onMouseEnter={e=>e.target.style.color='rgba(255,255,255,0.8)'}
+    onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.35)'}>
+    {l}
+  </a>
+))}
         </div>
       </footer>
 

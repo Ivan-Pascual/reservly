@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from '../../supabase';
 
+const ADMIN_EMAIL = 'ivanpascual100@gmail.com';
+
 function NavItem({ to, emoji, label, badge, onClose }) {
   return (
     <NavLink to={to} onClick={onClose}
@@ -29,11 +31,13 @@ function NavItem({ to, emoji, label, badge, onClose }) {
 export default function Sidebar({ onClose, onBuscar }) {
   const [negocioNombre, setNegocioNombre] = useState('Mi negocio');
   const [pendientes, setPendientes] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      if (user.email === ADMIN_EMAIL) setIsAdmin(true);
       const { data: negocio } = await supabase
         .from('negocios').select('id, nombre')
         .eq('user_id', user.id).single();
@@ -110,6 +114,13 @@ export default function Sidebar({ onClose, onBuscar }) {
         <div style={{ height: 1, background: '#ffffff10', margin: '12px 0' }} />
 
         <NavItem to="/ajustes" emoji="⚙️" label="Ajustes" onClose={cerrarSidebar} />
+
+        {isAdmin && (
+          <>
+            <div style={{ height: 1, background: '#EF444430', margin: '12px 0' }} />
+            <NavItem to="/admin" emoji="⚡" label="Admin" onClose={cerrarSidebar} />
+          </>
+        )}
       </div>
 
       {/* Usuario */}

@@ -11,6 +11,9 @@ import FichaCliente from './pages/clientes/FichaCliente';
 import Empleados from './pages/empleados/Empleados';
 import Servicios from './pages/servicios/Servicios';
 import Comisiones from './pages/comisiones/Comisiones';
+import Privacidad from './pages/legal/Privacidad';
+import Terminos from './pages/legal/Terminos';
+import Admin from './pages/admin/Admin';
 import Ajustes from './pages/ajustes/Ajustes';
 import TPV from './pages/tpv/TPV';
 import Landing from './pages/landing/Landing';
@@ -145,6 +148,7 @@ export default function App() {
                 <Routes>
                   <Route path="/dashboard"           element={<Dashboard />} />
                   <Route path="/reservas"            element={<Reservas />} />
+                  <Route path="/admin" element={<Admin />} />
                   <Route path="/agenda"              element={<Agenda />} />
                   <Route path="/clientes"            element={<Clientes />} />
                   <Route path="/clientes/:id"        element={<FichaCliente />} />
@@ -158,6 +162,8 @@ export default function App() {
                   <Route path="/vacaciones"          element={<Vacaciones />} />
                   <Route path="/stock"               element={<Stock />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
+                  <Route path="/privacidad" element={<Privacidad />} />
+                  <Route path="/terminos" element={<Terminos />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { pushNotifications } from '../../services/notificacionesPush';
 
-const AptRow = ({ nombre, servicio, empleado, hora_inicio, hora_fin, estado }) => {
+const AptRow = ({ nombre, servicio, empleado, hora_inicio, hora_fin, estado, reservaId, onCobrar }) => {
   const colors = {
     confirmada: { bg:'#E8F7F2', border:'#D6EDE5', dot:'#0A9E6E', badge:'#E8F7F2', badgeText:'#063D2A', label:'Confirmada' },
     pendiente:  { bg:'#FFF8E7', border:'#F5E4A0', dot:'#F59E0B', badge:'#FFF8E7', badgeText:'#92400E', label:'Pendiente'  },
@@ -21,7 +21,14 @@ const AptRow = ({ nombre, servicio, empleado, hora_inicio, hora_fin, estado }) =
         <div style={{ fontSize:11.5, color:'#6B9080', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{servicio} · {empleado}</div>
       </div>
       <div style={{ fontSize:11, fontFamily:'DM Mono, monospace', color:'#6B9080', flexShrink:0 }}>{hora_inicio}–{hora_fin}</div>
-      <div style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.badge, color:s.badgeText, flexShrink:0 }}>{s.label}</div>
+      {estado === 'confirmada' ? (
+        <button onClick={() => onCobrar(reservaId)}
+          style={{ padding:'4px 10px', background:'#063D2A', color:'#fff', border:'none', borderRadius:6, fontSize:11, fontWeight:700, cursor:'pointer', flexShrink:0 }}>
+          Cobrar
+        </button>
+      ) : (
+        <div style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.badge, color:s.badgeText, flexShrink:0 }}>{s.label}</div>
+      )}
     </div>
   );
 };
@@ -51,8 +58,9 @@ export default function Dashboard() {
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   );
   const [horaActual, setHoraActual] = useState(new Date());
+  const [notas, setNotas] = useState([]);
+  const [notaInput, setNotaInput] = useState('');
 
-  // Actualizar hora cada minuto para recordatorios en tiempo real
   useEffect(() => {
     const interval = setInterval(() => setHoraActual(new Date()), 60000);
     return () => clearInterval(interval);
@@ -70,7 +78,7 @@ export default function Dashboard() {
     const [
       reservasRes, tpvHoyRes, tpvMesRes, tpvTotalRes,
       totalHoyRes, totalMesRes, canceladasRes, pendientesRes,
-      clientesTotalRes, clientesMesRes, empsRes,
+      clientesTotalRes, clientesMesRes, empsRes, notasRes,
     ] = await Promise.all([
       supabase.from('reservas').select('*, clientes(nombre), empleados(nombre, color), servicios(nombre)')
         .eq('negocio_id', negocio.id).eq('fecha', hoy).order('hora_inicio'),
@@ -92,10 +100,13 @@ export default function Dashboard() {
       supabase.from('clientes').select('*', { count:'exact', head:true })
         .eq('negocio_id', negocio.id).gte('created_at', inicioMes + 'T00:00:00'),
       supabase.from('empleados').select('*').eq('negocio_id', negocio.id).eq('activo', true),
+      supabase.from('notas').select('*').eq('negocio_id', negocio.id)
+        .order('created_at', { ascending:false }).limit(20),
     ]);
 
     if (reservasRes.data) setReservasHoy(reservasRes.data);
     if (empsRes.data) setEmpleados(empsRes.data);
+    if (notasRes.data) setNotas(notasRes.data);
 
     const sumarImportes = (data) => (data || []).reduce((a, t) => a + (t.importe||0), 0);
 
@@ -114,6 +125,21 @@ export default function Dashboard() {
     setCargando(false);
   };
 
+  const agregarNota = async () => {
+    if (!notaInput.trim()) return;
+    const { data } = await supabase.from('notas').insert({
+      negocio_id: negocio.id,
+      contenido:  notaInput.trim(),
+    }).select().single();
+    if (data) setNotas(prev => [data, ...prev]);
+    setNotaInput('');
+  };
+
+  const eliminarNota = async (id) => {
+    await supabase.from('notas').delete().eq('id', id);
+    setNotas(prev => prev.filter(n => n.id !== id));
+  };
+
   if (loading || cargando) return (
     <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
@@ -128,7 +154,6 @@ export default function Dashboard() {
   const saludo = hora < 12 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
   const pad = isMobile ? 16 : 32;
 
-  // Calcular recordatorios — citas en los próximos 120 minutos
   const proximasCitas = reservasHoy.filter(r => {
     if (r.estado === 'cancelada' || r.estado === 'completada') return false;
     const minutos = getMinutosDesdeAhora(r.hora_inicio);
@@ -185,14 +210,18 @@ export default function Dashboard() {
 
         {/* Cita en curso */}
         {citaEnCurso.length > 0 && (
-          <div style={{ background:'#063D2A', border:'none', borderRadius:12, padding:'14px 18px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
-            <div style={{ width:10, height:10, borderRadius:'50%', background:'#0A9E6E', flexShrink:0, boxShadow:'0 0 0 3px rgba(10,158,110,0.3)', animation:'pulse 2s infinite' }}/>
+          <div style={{ background:'#063D2A', borderRadius:12, padding:'14px 18px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
+            <div style={{ width:10, height:10, borderRadius:'50%', background:'#0A9E6E', flexShrink:0, boxShadow:'0 0 0 3px rgba(10,158,110,0.3)' }}/>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:2 }}>En curso ahora</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>
                 {citaEnCurso[0].clientes?.nombre} — {citaEnCurso[0].servicios?.nombre}
               </div>
             </div>
+            <button onClick={() => navigate(`/tpv/${citaEnCurso[0].id}`)}
+              style={{ padding:'6px 14px', background:'#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              Cobrar →
+            </button>
             <div style={{ fontSize:13, color:'#0A9E6E', fontFamily:'DM Mono, monospace', fontWeight:600 }}>
               {citaEnCurso[0].hora_inicio?.slice(0,5)}–{citaEnCurso[0].hora_fin?.slice(0,5)}
             </div>
@@ -321,6 +350,8 @@ export default function Dashboard() {
                     hora_inicio={r.hora_inicio?.slice(0,5)}
                     hora_fin={r.hora_fin?.slice(0,5)}
                     estado={r.estado}
+                    reservaId={r.id}
+                    onCobrar={(id) => navigate(`/tpv/${id}`)}
                   />
                 ))
               ) : (
@@ -332,11 +363,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Panel lateral */}
+          {/* Panel lateral desktop */}
           {!isMobile && (
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
-              {/* Empleados */}
+              {/* Empleados activos */}
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:16 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12 }}>
                   Empleados activos
@@ -356,6 +387,45 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Bloc de notas */}
+              <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:16 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12 }}>
+                  📝 Notas internas
+                </div>
+                <div style={{ display:'flex', gap:6, marginBottom:10 }}>
+                  <input
+                    value={notaInput}
+                    onChange={e => setNotaInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && agregarNota()}
+                    placeholder="Añadir nota..."
+                    style={{ flex:1, padding:'7px 10px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:12.5, fontFamily:'DM Sans, sans-serif', outline:'none' }}
+                    onFocus={e => e.target.style.borderColor='#0A9E6E'}
+                    onBlur={e => e.target.style.borderColor='#D6EDE5'}
+                  />
+                  <button onClick={agregarNota}
+                    style={{ padding:'7px 10px', background:'#0A9E6E', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                    +
+                  </button>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:180, overflowY:'auto' }}>
+                  {notas.length > 0 ? notas.map(n => (
+                    <div key={n.id}
+                      style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'7px 8px', background:'#F4FAF7', borderRadius:8 }}
+                      onMouseEnter={e => { const btn = e.currentTarget.querySelector('.del-btn'); if (btn) btn.style.opacity='1'; }}
+                      onMouseLeave={e => { const btn = e.currentTarget.querySelector('.del-btn'); if (btn) btn.style.opacity='0'; }}>
+                      <div style={{ width:5, height:5, borderRadius:'50%', background:'#0A9E6E', marginTop:5, flexShrink:0 }}/>
+                      <div style={{ flex:1, fontSize:12.5, color:'#0B1E16', lineHeight:1.5 }}>{n.contenido}</div>
+                      <button className="del-btn" onClick={() => eliminarNota(n.id)}
+                        style={{ background:'transparent', border:'none', color:'#EF4444', fontSize:12, cursor:'pointer', opacity:0, transition:'opacity 0.15s', flexShrink:0, padding:'0 2px' }}>
+                        ✕
+                      </button>
+                    </div>
+                  )) : (
+                    <div style={{ fontSize:12, color:'#A8C4B8', textAlign:'center', padding:'12px 0' }}>Sin notas aún</div>
+                  )}
+                </div>
+              </div>
+
               {/* Accesos rápidos */}
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:16 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>
@@ -370,8 +440,7 @@ export default function Dashboard() {
                   <div key={a.ruta} onClick={() => navigate(a.ruta)}
                     style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 8px', borderRadius:8, cursor:'pointer', marginBottom:2 }}
                     onMouseEnter={e => e.currentTarget.style.background='#F4FAF7'}
-                    onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                  >
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                     <span style={{ fontSize:14 }}>{a.emoji}</span>
                     <span style={{ fontSize:13, color:'#0B1E16', fontWeight:500 }}>{a.label}</span>
                     <span style={{ marginLeft:'auto', fontSize:12, color:'#A8C4B8' }}>→</span>
@@ -382,7 +451,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Accesos rápidos en móvil */}
+          {/* Accesos rápidos móvil */}
           {isMobile && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               {[

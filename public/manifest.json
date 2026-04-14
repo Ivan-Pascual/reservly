@@ -1,12 +1,8 @@
 {
   "short_name": "Reservly",
-  "name": "Reservly — Tus citas, en piloto automático",
+  "name": "Reservly — Gestión de reservas",
+  "description": "Gestiona las reservas de tu negocio en piloto automático",
   "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
     {
       "src": "favicon.svg",
       "sizes": "any",
@@ -18,6 +14,7 @@
   "display": "standalone",
   "theme_color": "#063D2A",
   "background_color": "#F4FAF7",
-  "orientation": "portrait",
-  "description": "Gestiona las reservas de tu negocio con Reservly"
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["business", "productivity"]
 }

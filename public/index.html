@@ -2,29 +2,48 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-<link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#063D2A" />
-    <meta name="description" content="Reservly — Tus citas, en piloto automático" />
-    <meta property="og:title" content="Reservly" />
-    <meta property="og:description" content="Gestiona las reservas de tu negocio con Reservly" />
-    <meta property="og:image" content="%PUBLIC_URL%/logo192.png" />
-    <title>Reservly</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; background: #F4FAF7; }
-      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-    </style>
+
+    <!-- SEO básico -->
+    <meta name="description" content="Reservly — Gestiona las reservas de tu negocio en piloto automático. Citas online 24/7, TPV, stock, clientes y estadísticas. Gratis para empezar." />
+    <meta name="keywords" content="reservas online, gestión citas, software peluquería, agenda online, booking, reservly" />
+    <meta name="author" content="Reservly" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://getreservly.com/" />
+    <meta property="og:title" content="Reservly — Tus citas, en piloto automático" />
+    <meta property="og:description" content="Gestiona las reservas de tu negocio online. Citas 24/7, TPV integrado, stock, clientes y estadísticas. Gratis para empezar." />
+    <meta property="og:image" content="https://getreservly.com/og-image.png" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:site_name" content="Reservly" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://getreservly.com/" />
+    <meta name="twitter:title" content="Reservly — Tus citas, en piloto automático" />
+    <meta name="twitter:description" content="Gestiona las reservas de tu negocio online. Citas 24/7, TPV integrado, stock, clientes y estadísticas." />
+    <meta name="twitter:image" content="https://getreservly.com/og-image.png" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.svg" />
     <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Reservly" />
-<meta name="application-name" content="Reservly" />
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.svg" />
-<link rel="manifest" href="%PUBLIC_URL%/manifest.json" />  
-</head>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Reservly" />
+    <meta name="application-name" content="Reservly" />
+
+    <!-- Google GSI para Calendar -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <title>Reservly — Tus citas, en piloto automático</title>
+  </head>
   <body>
-    <noscript>Necesitas JavaScript para usar Reservly.</noscript>
+    <noscript>Necesitas activar JavaScript para usar Reservly.</noscript>
     <div id="root"></div>
   </body>
 </html>

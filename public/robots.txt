@@ -1,3 +1,18 @@
-# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /dashboard
+Disallow: /reservas
+Disallow: /clientes
+Disallow: /empleados
+Disallow: /servicios
+Disallow: /ajustes
+Disallow: /estadisticas
+Disallow: /agenda
+Disallow: /comisiones
+Disallow: /bonos
+Disallow: /stock
+Disallow: /tpv
+Disallow: /vacaciones
+Disallow: /valoraciones
+
+Sitemap: https://getreservly.com/sitemap.xml
