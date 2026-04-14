@@ -16,6 +16,7 @@ import Privacidad from './pages/legal/Privacidad';
 import Terminos from './pages/legal/Terminos';
 import Admin from './pages/admin/Admin';
 import Ajustes from './pages/ajustes/Ajustes';
+import PerfilPublico from './pages/perfil/PerfilPublico';
 import TPV from './pages/tpv/TPV';
 import Landing from './pages/landing/Landing';
 import PagoCancelado from './pages/pago/PagoCancelado';
@@ -172,7 +173,7 @@ export default function App() {
                   <Route path="/estadisticas"        element={<Estadisticas />} />
                   <Route path="/ajustes"             element={<Ajustes />} />
                   <Route path="/vacaciones"          element={<Vacaciones />} />
-                  <Route path="/stock"               element={<Stock />} />
+                  <Route path="/negocio/:slug" element={<PerfilPublico />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
                   <Route path="/pago/exito" element={<PagoExito />} />
                   <Route path="/pago/cancelado" element={<PagoCancelado />} />
