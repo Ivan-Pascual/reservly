@@ -408,6 +408,28 @@ export default function Ajustes() {
               </div>
             </div>
           </Section>
+
+          <Section title="Widget embebible">
+            <div style={{ padding:'14px 0' }}>
+              <div style={{ fontSize:13, color:'#6B9080', lineHeight:1.6, marginBottom:14 }}>
+                Pega este código en tu web para que tus clientes reserven sin salir de ella.
+              </div>
+              <div style={{ background:'#0B1E16', borderRadius:10, padding:'14px 16px', marginBottom:12, overflowX:'auto' }}>
+                <code style={{ fontSize:11.5, color:'#7FFFD4', fontFamily:'DM Mono, monospace', whiteSpace:'nowrap' }}>
+                  {`<script src="https://getreservly.com/widget.js" data-negocio="${negocio?.slug || 'tu-slug'}"></script>`}
+                </code>
+              </div>
+              <button onClick={() => {
+                navigator.clipboard.writeText(`<script src="https://getreservly.com/widget.js" data-negocio="${negocio?.slug || ''}"></script>`);
+                alert('Código copiado al portapapeles');
+              }} style={{ width:'100%', padding:10, background:'#063D2A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                Copiar código →
+              </button>
+              <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:10 }}>
+                Funciona en cualquier web, Wix, WordPress o Squarespace.
+              </div>
+            </div>
+          </Section>
         </div>
 
         {/* ── Col derecha ── */}
