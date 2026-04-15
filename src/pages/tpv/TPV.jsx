@@ -22,17 +22,19 @@ export default function TPV() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [codigoBarras, setCodigoBarras] = useState('');
-  const [modoEscaneo, setModoEscaneo] = useState(null); // null | 'pistola' | 'camara'
+  const [modoEscaneo, setModoEscaneo] = useState(null);
   const [errorCodigo, setErrorCodigo] = useState('');
   const [productoManual, setProductoManual] = useState({ nombre:'', precio:'' });
   const [showManual, setShowManual] = useState(false);
   const [camaraActiva, setCamaraActiva] = useState(false);
+  const [cobrado, setCobrado] = useState(false);
+  const [reservaCobrada, setReservaCobrada] = useState(null);
 
   useEffect(() => {
     if (!negocio) return;
     fetchData();
     return () => detenerCamara();
-  }, [negocio]);
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     const [resRes, prodRes] = await Promise.all([
@@ -61,7 +63,6 @@ export default function TPV() {
     setLoading(false);
   };
 
-  // ── Pistola ──────────────────────────────────────────────
   const activarPistola = () => {
     detenerCamara();
     setModoEscaneo('pistola');
@@ -80,12 +81,10 @@ export default function TPV() {
     }
   };
 
-  // ── Cámara ───────────────────────────────────────────────
   const activarCamara = async () => {
     setModoEscaneo('camara');
     setErrorCodigo('');
     setCamaraActiva(false);
-
     try {
       readerRef.current = new BrowserMultiFormatReader();
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
@@ -94,26 +93,20 @@ export default function TPV() {
         setModoEscaneo(null);
         return;
       }
-
-      // Preferir cámara trasera en móvil
       const camaraIdeal = devices.find(d =>
         d.label.toLowerCase().includes('back') ||
         d.label.toLowerCase().includes('trasera') ||
         d.label.toLowerCase().includes('rear')
       ) || devices[devices.length - 1];
-
       setCamaraActiva(true);
-
-      // Pequeño delay para que el videoRef esté en el DOM
       setTimeout(async () => {
         try {
           await readerRef.current.decodeFromVideoDevice(
             camaraIdeal.deviceId,
             videoRef.current,
-            (result, error) => {
+            (result) => {
               if (result) {
                 procesarCodigo(result.getText());
-                // Vibrar en móvil como confirmación
                 if (navigator.vibrate) navigator.vibrate(100);
               }
             }
@@ -144,7 +137,6 @@ export default function TPV() {
     setErrorCodigo('');
   };
 
-  // ── Lógica común ─────────────────────────────────────────
   const procesarCodigo = (codigo) => {
     const producto = productos.find(p => p.codigo_barras === codigo);
     if (producto) {
@@ -240,7 +232,6 @@ export default function TPV() {
         precio_final: total,
       }).eq('id', reservaId);
 
-      // Descontar stock
       for (const linea of lineas.filter(l => l.producto_id)) {
         const producto = productos.find(p => p.id === linea.producto_id);
         if (!producto) continue;
@@ -257,7 +248,8 @@ export default function TPV() {
         ]);
       }
 
-      navigate('/reservas');
+      setReservaCobrada({ ...reserva, totalCobrado: total });
+      setCobrado(true);
     } catch (err) {
       alert(err.message || 'Error al cobrar.');
     }
@@ -275,6 +267,56 @@ export default function TPV() {
       <div style={{ fontSize:14, color:'#EF4444' }}>Reserva no encontrada</div>
     </div>
   );
+
+  // ── Pantalla de éxito post-cobro ──────────────────────────
+  if (cobrado && reservaCobrada) {
+    const telefonoRaw = reservaCobrada.clientes?.telefono?.replace(/\s/g, '') || '';
+    const telefono = telefonoRaw.startsWith('+') ? telefonoRaw.slice(1) : telefonoRaw;
+    const linkResena = `https://getreservly.com/resena/${negocio?.slug}/${reservaId}`;
+    const mensajeWA = encodeURIComponent(
+      `Hola ${reservaCobrada.clientes?.nombre || ''}! Gracias por tu visita 😊 Si tienes un momento, nos encantaría que dejaras una reseña: ${linkResena}`
+    );
+
+    return (
+      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:32, background:'#F4FAF7' }}>
+        <div style={{ maxWidth:420, width:'100%', textAlign:'center' }}>
+          <div style={{ width:80, height:80, borderRadius:'50%', background:'#063D2A', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, margin:'0 auto 20px', boxShadow:'0 0 0 8px #E8F7F2' }}>
+            ✓
+          </div>
+          <h2 style={{ fontSize:24, fontWeight:800, color:'#0B1E16', marginBottom:8, letterSpacing:-0.5 }}>
+            ¡Cobro completado!
+          </h2>
+          <p style={{ fontSize:14, color:'#6B9080', lineHeight:1.7, marginBottom:4 }}>
+            {reservaCobrada.clientes?.nombre} · <strong style={{ color:'#0A9E6E', fontFamily:'DM Mono, monospace' }}>{reservaCobrada.totalCobrado?.toFixed(2)} EUR</strong>
+          </p>
+          <p style={{ fontSize:13, color:'#A8C4B8', marginBottom:28 }}>
+            Reserva marcada como completada.
+          </p>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {telefono && (
+              <a href={`https://wa.me/${telefono}?text=${mensajeWA}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, width:'100%', padding:'14px', background:'#25D366', color:'#fff', borderRadius:10, fontSize:14, fontWeight:700, textDecoration:'none' }}>
+                💬 Pedir reseña por WhatsApp
+              </a>
+            )}
+            <button onClick={() => {
+              navigator.clipboard.writeText(linkResena);
+              alert('Link copiado. Envíaselo al cliente.');
+            }}
+              style={{ width:'100%', padding:'12px', background:'#FFF8E7', color:'#92400E', border:'1px solid #F5E4A0', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+              ⭐ Copiar link de reseña
+            </button>
+            <button onClick={() => navigate('/reservas')}
+              style={{ width:'100%', padding:'12px', background:'#F4FAF7', color:'#6B9080', border:'1px solid #D6EDE5', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+              Volver a reservas →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const pad = isMobile ? 16 : 32;
 
@@ -294,7 +336,6 @@ export default function TPV() {
         {/* Columna izquierda */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', gap:14 }}>
 
-          {/* Info reserva */}
           <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:12, padding:'14px 16px' }}>
             <div style={{ fontSize:14, fontWeight:700, color:'#063D2A', marginBottom:4 }}>
               {reserva.clientes?.nombre || 'Cliente'}
@@ -305,11 +346,9 @@ export default function TPV() {
             </div>
           </div>
 
-          {/* Añadir productos */}
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:16 }}>
             <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:12 }}>Añadir productos</div>
 
-            {/* Botones modo escaneo */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12 }}>
               <button onClick={activarPistola}
                 style={{ padding:'10px 8px', background: modoEscaneo==='pistola' ? '#063D2A' : '#F4FAF7', color: modoEscaneo==='pistola' ? '#fff' : '#6B9080', border:`1px solid ${modoEscaneo==='pistola' ? '#063D2A' : '#D6EDE5'}`, borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
@@ -325,7 +364,6 @@ export default function TPV() {
               </button>
             </div>
 
-            {/* Input pistola */}
             {modoEscaneo === 'pistola' && (
               <div style={{ marginBottom:10 }}>
                 <div style={{ fontSize:11.5, color:'#0A9E6E', fontWeight:600, marginBottom:6 }}>
@@ -343,7 +381,6 @@ export default function TPV() {
               </div>
             )}
 
-            {/* Visor cámara */}
             {modoEscaneo === 'camara' && (
               <div style={{ marginBottom:10 }}>
                 <div style={{ fontSize:11.5, color:'#0A9E6E', fontWeight:600, marginBottom:6 }}>
@@ -356,7 +393,6 @@ export default function TPV() {
                       Iniciando cámara...
                     </div>
                   )}
-                  {/* Guía visual */}
                   <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
                     <div style={{ width:'60%', height:'30%', border:'2px solid #0A9E6E', borderRadius:8, opacity:0.8 }}/>
                   </div>
@@ -368,7 +404,6 @@ export default function TPV() {
               </div>
             )}
 
-            {/* Producto manual */}
             {showManual && (
               <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap' }}>
                 <input value={productoManual.nombre}
@@ -386,14 +421,12 @@ export default function TPV() {
               </div>
             )}
 
-            {/* Error código */}
             {errorCodigo && (
               <div style={{ fontSize:12, color:'#EF4444', padding:'8px 12px', background:'#FEF2F2', borderRadius:8, marginBottom:10 }}>
                 {errorCodigo}
               </div>
             )}
 
-            {/* Lista productos del stock */}
             {!modoEscaneo && !showManual && productos.length > 0 && (
               <div style={{ maxHeight:220, overflowY:'auto', display:'flex', flexDirection:'column', gap:4 }}>
                 <div style={{ fontSize:11, color:'#A8C4B8', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>Toca para añadir</div>
@@ -425,7 +458,6 @@ export default function TPV() {
         {/* Columna derecha — ticket */}
         <div style={{ width: isMobile ? '100%' : 340, display:'flex', flexDirection:'column', gap:14 }}>
 
-          {/* Líneas ticket */}
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:16, flex:1 }}>
             <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:12 }}>Ticket</div>
             {lineas.length === 0 ? (
@@ -466,7 +498,6 @@ export default function TPV() {
             )}
           </div>
 
-          {/* Totales y cobro */}
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:16 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
               <span style={{ fontSize:13, color:'#6B9080' }}>Propina (EUR)</span>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNegocio } from '../../hooks/useNegocio';
 
 export default function QRImprimible() {
@@ -16,10 +16,22 @@ export default function QRImprimible() {
 
   const imprimir = () => window.print();
 
+  const descargarPNG = async () => {
+    if (!qrUrl) return;
+    const res = await fetch(qrUrl);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qr-reserva-${negocio?.slug || 'negocio'}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const estilos = {
-    verde: { bg: '#063D2A', texto: '#fff', acento: '#0A9E6E' },
-    blanco: { bg: '#fff', texto: '#063D2A', acento: '#0A9E6E' },
-    negro: { bg: '#0B1E16', texto: '#fff', acento: '#7FFFD4' },
+    verde:  { bg:'#063D2A', texto:'#fff',    acento:'#0A9E6E' },
+    blanco: { bg:'#fff',    texto:'#063D2A', acento:'#0A9E6E' },
+    negro:  { bg:'#0B1E16', texto:'#fff',    acento:'#7FFFD4' },
   };
 
   const e = estilos[estilo];
@@ -47,9 +59,13 @@ export default function QRImprimible() {
       <div className="no-print" style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:'0 32px', height:60, display:'flex', alignItems:'center', gap:16 }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>QR de reserva</div>
         <div style={{ marginLeft:'auto', display:'flex', gap:8 }}>
+          <button onClick={descargarPNG}
+            style={{ background:'#F4FAF7', color:'#063D2A', border:'1px solid #D6EDE5', padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            ⬇️ Descargar PNG
+          </button>
           <button onClick={imprimir}
             style={{ background:'#063D2A', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer' }}>
-            🖨️ Imprimir / Guardar PDF
+            🖨️ Imprimir / PDF
           </button>
         </div>
       </div>
@@ -62,9 +78,9 @@ export default function QRImprimible() {
             <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16', marginBottom:16 }}>Estilo del cartel</div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {[
-                { key:'verde', label:'Verde oscuro', desc:'Fondo verde · Texto blanco' },
-                { key:'blanco', label:'Blanco', desc:'Fondo blanco · Texto verde' },
-                { key:'negro', label:'Negro', desc:'Fondo negro · Texto menta' },
+                { key:'verde',  label:'Verde oscuro', desc:'Fondo verde · Texto blanco' },
+                { key:'blanco', label:'Blanco',       desc:'Fondo blanco · Texto verde' },
+                { key:'negro',  label:'Negro',        desc:'Fondo negro · Texto menta'  },
               ].map(o => (
                 <label key={o.key} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', border:`1.5px solid ${estilo===o.key ? '#0A9E6E' : '#D6EDE5'}`, borderRadius:8, cursor:'pointer', background: estilo===o.key ? '#E8F7F2' : '#F4FAF7' }}>
                   <input type="radio" checked={estilo===o.key} onChange={() => setEstilo(o.key)} style={{ accentColor:'#0A9E6E' }}/>
@@ -130,12 +146,6 @@ export default function QRImprimible() {
                     Cargando QR...
                   </div>
                 )}
-              </div>
-
-              {/* Instrucción */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:16 }}>
-                <span style={{ fontSize:18 }}>📱</span>
-                <span style={{ fontSize:13, fontWeight:600, color:e.texto }}>Escanea con la cámara</span>
               </div>
 
               {/* URL corta */}
