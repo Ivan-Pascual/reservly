@@ -32,6 +32,7 @@ import Stock from './pages/stock/Stock';
 import HistorialStock from './pages/stock/HistorialStock';
 import Demo from './pages/demo/Demo';
 import Fidelizacion from './pages/fidelizacion/Fidelizacion';
+import QRImprimible from './pages/qr/QRImprimible';
 
 const TITULOS = {
   '/dashboard':    'Inicio',
@@ -46,6 +47,7 @@ const TITULOS = {
   '/estadisticas': 'Estadísticas',
   '/ajustes':      'Ajustes',
   '/vacaciones':   'Vacaciones',
+  '/qr': 'QR de reserva',
   '/fidelizacion': 'Fidelización',
 };
 
@@ -183,6 +185,7 @@ export default function App() {
                   <Route path="/ajustes"             element={<Ajustes />} />
                   <Route path="/vacaciones"          element={<Vacaciones />} />
                   <Route path="/stock"               element={<Stock />} />
+                  <Route path="/qr" element={<QRImprimible />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
                   <Route path="/pago/exito"          element={<PagoExito />} />
                   <Route path="/pago/cancelado"      element={<PagoCancelado />} />

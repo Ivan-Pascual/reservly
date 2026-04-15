@@ -1,27 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { usePlan } from '../../hooks/usePlan';
 
 const ADMIN_EMAIL = 'ivanpascual100@gmail.com';
 
-function NavItem({ to, emoji, label, badge, onClose }) {
+function NavItem({ to, emoji, label, badge, onClose, bloqueado }) {
+  const navigate = useNavigate();
+
+  if (bloqueado) {
+    return (
+      <div onClick={() => navigate('/ajustes')}
+        style={{
+          display:'flex', alignItems:'center', gap:10,
+          padding:'9px 12px', borderRadius:8,
+          color:'#ffffff30', cursor:'pointer',
+          fontSize:13.5, marginBottom:2,
+          opacity:0.5,
+        }}>
+        <span>{emoji}</span>
+        <span style={{ flex:1 }}>{label}</span>
+        <span style={{ fontSize:10, color:'#ffffff30' }}>🔒</span>
+      </div>
+    );
+  }
+
   return (
     <NavLink to={to} onClick={onClose}
       style={({ isActive }) => ({
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 12px', borderRadius: 8,
+        display:'flex', alignItems:'center', gap:10,
+        padding:'9px 12px', borderRadius:8,
         color: isActive ? '#fff' : '#ffffff80',
         background: isActive ? '#0A9E6E' : 'transparent',
         fontWeight: isActive ? 600 : 500,
-        fontSize: 13.5, transition: 'all 0.15s',
-        marginBottom: 2, textDecoration: 'none',
+        fontSize:13.5, transition:'all 0.15s',
+        marginBottom:2, textDecoration:'none',
       })}
     >
       <span>{emoji}</span>
-      <span style={{ flex: 1 }}>{label}</span>
+      <span style={{ flex:1 }}>{label}</span>
       {badge > 0 && (
-        <span style={{ background: '#F59E0B', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 20 }}>
+        <span style={{ background:'#F59E0B', color:'#fff', fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:20 }}>
           {badge}
         </span>
       )}
@@ -34,7 +53,7 @@ export default function Sidebar({ onClose, onBuscar }) {
   const [negocioPlan, setNegocioPlan] = useState('trial');
   const [pendientes, setPendientes] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { esTrial, diasRestantes } = usePlan();
+  const { esTrial, diasRestantes, puede } = usePlan();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,7 +67,7 @@ export default function Sidebar({ onClose, onBuscar }) {
         setNegocioNombre(negocio.nombre);
         setNegocioPlan(negocio.plan || 'trial');
         const { count } = await supabase
-          .from('reservas').select('*', { count: 'exact', head: true })
+          .from('reservas').select('*', { count:'exact', head:true })
           .eq('negocio_id', negocio.id).eq('estado', 'pendiente');
         setPendientes(count || 0);
       }
@@ -80,19 +99,19 @@ export default function Sidebar({ onClose, onBuscar }) {
       `}</style>
 
       <aside style={{
-        background: '#063D2A', width: 240, height: '100vh',
-        display: 'flex', flexDirection: 'column', flexShrink: 0,
+        background:'#063D2A', width:240, height:'100vh',
+        display:'flex', flexDirection:'column', flexShrink:0,
       }}>
 
         {/* Logo */}
-        <div style={{ padding: '24px 20px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink:0 }}>
+        <div style={{ padding:'24px 20px 16px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
           <svg width="30" height="30" viewBox="0 0 48 48" fill="none">
             <path d="M10 42L10 8C10 5 12 4 14 4L28 4C38 4 44 10 44 18C44 26 38 32 28 32L10 32M21 32L44 42"
               stroke="white" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
             <circle cx="21" cy="32" r="4.5" fill="white"/>
             <circle cx="21" cy="32" r="2.2" fill="#063D2A"/>
           </svg>
-          <span style={{ fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing:-0.3 }}>Reservly</span>
+          <span style={{ fontSize:17, fontWeight:700, color:'#fff', letterSpacing:-0.3 }}>Reservly</span>
         </div>
 
         {/* Buscador */}
@@ -117,18 +136,18 @@ export default function Sidebar({ onClose, onBuscar }) {
           <NavItem to="/empleados"  emoji="👥"  label="Empleados"       onClose={cerrarSidebar} />
           <NavItem to="/servicios"  emoji="✂️"  label="Servicios"       onClose={cerrarSidebar} />
           <NavItem to="/stock"      emoji="📦"  label="Stock"           onClose={cerrarSidebar} />
-
+          <NavItem to="/qr" emoji="⬛" label="QR de reserva" onClose={cerrarSidebar} />
           <div style={{ height:1, background:'#ffffff10', margin:'12px 0' }}/>
 
           <div style={{ fontSize:10, fontWeight:600, letterSpacing:'1.2px', color:'#ffffff40', textTransform:'uppercase', padding:'8px 12px 6px' }}>
             Gestión
           </div>
 
-          <NavItem to="/fidelizacion" emoji="🏅" label="Fidelización"       onClose={cerrarSidebar} />
-          <NavItem to="/comisiones"   emoji="⏱"  label="Comisiones"         onClose={cerrarSidebar} />
+          <NavItem to="/fidelizacion" emoji="🏅" label="Fidelización"       onClose={cerrarSidebar} bloqueado={!puede('fidelizacion')} />
+          <NavItem to="/comisiones"   emoji="⏱"  label="Comisiones"         onClose={cerrarSidebar} bloqueado={!puede('comisiones')} />
           <NavItem to="/vacaciones"   emoji="🏖️" label="Vacaciones"          onClose={cerrarSidebar} />
-          <NavItem to="/bonos"        emoji="🎁"  label="Bonos y descuentos"  onClose={cerrarSidebar} />
-          <NavItem to="/valoraciones" emoji="⭐"  label="Valoraciones"        onClose={cerrarSidebar} />
+          <NavItem to="/bonos"        emoji="🎁"  label="Bonos y descuentos"  onClose={cerrarSidebar} bloqueado={!puede('bonos')} />
+          <NavItem to="/valoraciones" emoji="⭐"  label="Valoraciones"        onClose={cerrarSidebar} bloqueado={!puede('resenas')} />
           <NavItem to="/estadisticas" emoji="📈"  label="Estadísticas"        onClose={cerrarSidebar} />
 
           <div style={{ height:1, background:'#ffffff10', margin:'12px 0' }}/>
