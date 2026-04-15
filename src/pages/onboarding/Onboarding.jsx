@@ -172,34 +172,79 @@ export default function Onboarding({ negocioId, onComplete }) {
         <div style={{ width:'100%', maxWidth:640 }}>
 
           {/* PASO 0 — Tipo */}
-          {paso === 0 && (
-            <div>
-              <h2 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:8 }}>¿Qué tipo de negocio tienes?</h2>
-              <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Esto configura cómo funciona tu agenda de reservas.</p>
-              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {TIPOS.map(t => (
-                  <div key={t.id} onClick={() => setTipo(t.id)} style={{
-                    background: tipo===t.id ? '#E8F7F2' : '#fff',
-                    border:`2px solid ${tipo===t.id ? '#0A9E6E' : '#EAF5EF'}`,
-                    borderRadius:14, padding:'18px 20px', cursor:'pointer', transition:'all 0.15s',
-                  }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                      <span style={{ fontSize:28, flexShrink:0 }}>{t.emoji}</span>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>{t.titulo}</div>
-                        <div style={{ fontSize:13, color:'#6B9080', marginTop:3 }}>{t.desc}</div>
-                        <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:4 }}>{t.ejemplos}</div>
-                      </div>
-                      <div style={{ width:24, height:24, borderRadius:'50%', background: tipo===t.id ? '#0A9E6E' : '#EAF5EF', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:13, flexShrink:0 }}>
-                        {tipo===t.id ? '✓' : ''}
-                      </div>
-                    </div>
-                  </div>
+{paso === 0 && (
+  <div>
+    <h2 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:8 }}>¿Qué tipo de negocio tienes?</h2>
+    <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Esto configura cómo funciona tu agenda. Elige el que más se parezca a tu negocio.</p>
+    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      {[
+        {
+          id:'profesional',
+          emoji:'💈',
+          titulo:'Por profesional',
+          desc:'Cada persona de tu equipo tiene su propia agenda. El cliente elige con quién quiere la cita.',
+          ejemplos:['Peluquería con 2 o más estilistas', 'Clínica con varios fisioterapeutas', 'Centro de estética con varias esteticistas'],
+          cuando:'Cuando tienes empleados y cada uno atiende por separado',
+          color:'#0A9E6E',
+        },
+        {
+          id:'recurso',
+          emoji:'🍽️',
+          titulo:'Por recurso o espacio',
+          desc:'Las reservas son por un espacio, mesa o pista. No importa quién atiende, sino qué está disponible.',
+          ejemplos:['Restaurante con mesas reservables', 'Club de pádel con pistas', 'Sala de reuniones o coworking'],
+          cuando:'Cuando lo que se reserva es un espacio, no una persona',
+          color:'#3B82F6',
+        },
+        {
+          id:'simple',
+          emoji:'📅',
+          titulo:'Simple — solo yo',
+          desc:'Eres tú solo quien atiende. Los clientes reservan una cita contigo directamente.',
+          ejemplos:['Fotógrafo autónomo', 'Consultor o coach', 'Médico o terapeuta en solitario'],
+          cuando:'Cuando trabajas solo o no necesitas diferenciar empleados',
+          color:'#8B5CF6',
+        },
+      ].map(t => (
+        <div key={t.id} onClick={() => setTipo(t.id)} style={{
+          background: tipo===t.id ? '#E8F7F2' : '#fff',
+          border:`2px solid ${tipo===t.id ? t.color : '#EAF5EF'}`,
+          borderRadius:14, padding:'18px 20px', cursor:'pointer', transition:'all 0.15s',
+        }}>
+          <div style={{ display:'flex', alignItems:'flex-start', gap:14 }}>
+            <div style={{ width:48, height:48, borderRadius:12, background: tipo===t.id ? t.color+'20' : '#F4FAF7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>
+              {t.emoji}
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+                <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>{t.titulo}</div>
+                <div style={{ width:22, height:22, borderRadius:'50%', background: tipo===t.id ? t.color : '#EAF5EF', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:12, flexShrink:0 }}>
+                  {tipo===t.id ? '✓' : ''}
+                </div>
+              </div>
+              <div style={{ fontSize:13, color:'#0B1E16', marginBottom:8, lineHeight:1.5 }}>{t.desc}</div>
+
+              {/* Ejemplos */}
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                {t.ejemplos.map((ej, i) => (
+                  <span key={i} style={{ fontSize:11.5, background: tipo===t.id ? t.color+'15' : '#F4FAF7', color: tipo===t.id ? t.color : '#6B9080', padding:'3px 10px', borderRadius:20, border:`1px solid ${tipo===t.id ? t.color+'30' : '#EAF5EF'}` }}>
+                    {ej}
+                  </span>
                 ))}
               </div>
-            </div>
-          )}
 
+              {/* Cuándo elegirlo */}
+              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <span style={{ fontSize:11, color:'#A8C4B8' }}>💡</span>
+                <span style={{ fontSize:12, color:'#A8C4B8', fontStyle:'italic' }}>{t.cuando}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
           {/* PASO 1 — Info */}
           {paso === 1 && (
             <div>

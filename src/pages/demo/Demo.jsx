@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const DATOS_DEMO = {
-  negocio: { nombre: 'Peluquería Demo', slug: 'demo', telefono: '+34 600 000 000', direccion: 'Calle Mayor 1, Huesca' },
   reservasHoy: [
     { id:1, clientes:{ nombre:'Carmen López' }, servicios:{ nombre:'Corte y peinado' }, empleados:{ nombre:'María García', color:'#0A9E6E' }, hora_inicio:'09:00', hora_fin:'10:00', estado:'confirmada' },
     { id:2, clientes:{ nombre:'Ana Martínez' }, servicios:{ nombre:'Tinte' }, empleados:{ nombre:'Laura Pérez', color:'#3B82F6' }, hora_inicio:'10:30', hora_fin:'12:00', estado:'confirmada' },
@@ -59,101 +58,92 @@ export default function Demo() {
   const navigate = useNavigate();
   const [pantalla, setPantalla] = useState('dashboard');
   const [hora, setHora] = useState(new Date().getHours());
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isSmall, setIsSmall] = useState(window.innerWidth < 500);
 
   useEffect(() => {
     const interval = setInterval(() => setHora(new Date().getHours()), 60000);
-    const onResize = () => setIsMobile(window.innerWidth < 768);
+    const onResize = () => setIsSmall(window.innerWidth < 500);
     window.addEventListener('resize', onResize);
     return () => { clearInterval(interval); window.removeEventListener('resize', onResize); };
   }, []);
 
   const saludo = hora < 12 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
-
-  const DemoBadge = () => (
-    <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:20, padding:'3px 10px', fontSize:11, color:'#92400E', fontWeight:600 }}>
-      👁️ Demo
-    </div>
-  );
+  const sidebarW = isSmall ? 52 : 200;
 
   const Topbar = ({ titulo }) => (
-    <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${isMobile ? 16 : 28}px`, height:56, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
-      <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>{titulo}</div>
-      <DemoBadge/>
-      {!isMobile && (
+    <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:'0 16px', height:52, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+      <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{titulo}</div>
+      <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:20, padding:'2px 8px', fontSize:10, color:'#92400E', fontWeight:600 }}>Demo</div>
+      {!isSmall && (
         <button onClick={() => navigate('/login')}
-          style={{ marginLeft:'auto', background:'#0A9E6E', color:'#fff', border:'none', padding:'7px 14px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-          Crear cuenta gratis →
+          style={{ marginLeft:'auto', background:'#0A9E6E', color:'#fff', border:'none', padding:'6px 12px', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}>
+          Crear cuenta →
         </button>
       )}
     </div>
   );
 
-  // ── DASHBOARD ──────────────────────────────────────────────
   const renderDashboard = () => (
     <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto' }}>
       <Topbar titulo="Inicio"/>
-      <div style={{ padding:isMobile ? 14 : 24, display:'flex', flexDirection:'column', gap:14 }}>
-        <h2 style={{ fontSize:isMobile ? 18 : 22, fontWeight:700, color:'#0B1E16', margin:0 }}>{saludo}, Peluquería Demo 👋</h2>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+      <div style={{ padding:isSmall ? 10 : 20, display:'flex', flexDirection:'column', gap:12 }}>
+        {!isSmall && <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>{saludo}, Peluquería Demo 👋</div>}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
           {[
-            { label:'Citas hoy',  value: DATOS_DEMO.stats.hoy, featured:true },
-            { label:'Este mes',   value: DATOS_DEMO.stats.mes },
+            { label:'Citas hoy',     value: DATOS_DEMO.stats.hoy,              featured:true },
+            { label:'Este mes',      value: DATOS_DEMO.stats.mes },
             { label:'Facturado hoy', value: `${DATOS_DEMO.stats.facturacionHoy}€` },
-            { label:'Clientes',   value: DATOS_DEMO.stats.clientesTotal },
+            { label:'Clientes',      value: DATOS_DEMO.stats.clientesTotal },
           ].map(s => (
-            <div key={s.label} style={{ background: s.featured ? '#063D2A' : '#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
-              <div style={{ fontSize:10, color: s.featured ? '#ffffff60' : '#6B9080', fontWeight:600, textTransform:'uppercase', marginBottom:6 }}>{s.label}</div>
-              <div style={{ fontSize:24, fontWeight:700, color: s.featured ? '#fff' : '#0B1E16', fontFamily:'DM Mono, monospace' }}>{s.value}</div>
+            <div key={s.label} style={{ background: s.featured ? '#063D2A' : '#fff', border:'1px solid #EAF5EF', borderRadius:10, padding:'12px 14px' }}>
+              <div style={{ fontSize:9, color: s.featured ? '#ffffff60' : '#6B9080', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>{s.label}</div>
+              <div style={{ fontSize:20, fontWeight:700, color: s.featured ? '#fff' : '#0B1E16', fontFamily:'DM Mono, monospace' }}>{s.value}</div>
             </div>
           ))}
         </div>
-        <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-          <div style={{ padding:'12px 16px', borderBottom:'1px solid #EAF5EF', fontSize:13, fontWeight:700, color:'#0B1E16' }}>Agenda de hoy</div>
-          <div style={{ padding:'10px 14px', display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, overflow:'hidden' }}>
+          <div style={{ padding:'10px 14px', borderBottom:'1px solid #EAF5EF', fontSize:12, fontWeight:700, color:'#0B1E16' }}>Agenda de hoy</div>
+          <div style={{ padding:'8px 12px', display:'flex', flexDirection:'column', gap:6 }}>
             {DATOS_DEMO.reservasHoy.map(r => {
               const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
               return (
-                <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:s.bg, borderRadius:8 }}>
-                  <div style={{ width:3, height:32, borderRadius:2, background:s.color, flexShrink:0 }}/>
+                <div key={r.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', background:s.bg, borderRadius:8 }}>
+                  <div style={{ width:3, height:28, borderRadius:2, background:s.color, flexShrink:0 }}/>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.clientes.nombre}</div>
-                    <div style={{ fontSize:11, color:'#6B9080' }}>{r.servicios.nombre}</div>
+                    <div style={{ fontSize:12, fontWeight:600, color:'#0B1E16', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.clientes.nombre}</div>
+                    {!isSmall && <div style={{ fontSize:10, color:'#6B9080' }}>{r.servicios.nombre}</div>}
                   </div>
-                  <div style={{ fontSize:11, fontFamily:'DM Mono, monospace', color:'#6B9080', flexShrink:0 }}>{r.hora_inicio}</div>
+                  <div style={{ fontSize:10, fontFamily:'DM Mono, monospace', color:'#6B9080', flexShrink:0 }}>{r.hora_inicio}</div>
                 </div>
               );
             })}
           </div>
         </div>
-        {isMobile && (
-          <button onClick={() => navigate('/login')}
-            style={{ width:'100%', background:'#0A9E6E', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
-            Crear mi cuenta gratis →
-          </button>
-        )}
+        <button onClick={() => navigate('/login')}
+          style={{ width:'100%', background:'#0A9E6E', color:'#fff', border:'none', padding:'12px', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          Crear mi cuenta gratis →
+        </button>
       </div>
     </div>
   );
 
-  // ── RESERVAS ───────────────────────────────────────────────
   const renderReservas = () => (
     <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto' }}>
       <Topbar titulo="Reservas"/>
-      <div style={{ padding:isMobile ? 14 : 24, display:'flex', flexDirection:'column', gap:12 }}>
+      <div style={{ padding:isSmall ? 10 : 20, display:'flex', flexDirection:'column', gap:10 }}>
         {DATOS_DEMO.reservasHoy.map(r => {
           const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
           return (
-            <div key={r.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
-                <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{r.clientes.nombre}</div>
-                <span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span>
+            <div key={r.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'12px 14px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>{r.clientes.nombre}</div>
+                <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.bg, color:s.color, flexShrink:0, marginLeft:6 }}>{s.label}</span>
               </div>
-              <div style={{ fontSize:12.5, color:'#6B9080', marginBottom:4 }}>{r.servicios.nombre}</div>
-              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <div style={{ width:7, height:7, borderRadius:'50%', background:r.empleados.color }}/>
-                <span style={{ fontSize:12, color:'#6B9080' }}>{r.empleados.nombre}</span>
-                <span style={{ fontSize:12, color:'#A8C4B8', marginLeft:'auto', fontFamily:'DM Mono, monospace' }}>{r.hora_inicio} – {r.hora_fin}</span>
+              <div style={{ fontSize:11.5, color:'#6B9080', marginBottom:4 }}>{r.servicios.nombre}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                <div style={{ width:6, height:6, borderRadius:'50%', background:r.empleados.color }}/>
+                <span style={{ fontSize:11, color:'#6B9080' }}>{r.empleados.nombre}</span>
+                <span style={{ fontSize:11, color:'#A8C4B8', marginLeft:'auto', fontFamily:'DM Mono, monospace' }}>{r.hora_inicio}–{r.hora_fin}</span>
               </div>
             </div>
           );
@@ -162,36 +152,33 @@ export default function Demo() {
     </div>
   );
 
-  // ── CLIENTES ───────────────────────────────────────────────
   const renderClientes = () => (
     <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto' }}>
       <Topbar titulo="Clientes"/>
-      <div style={{ padding:isMobile ? 14 : 24, display:'flex', flexDirection:'column', gap:12 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+      <div style={{ padding:isSmall ? 10 : 20, display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
           {[
-            { label:'Total',    value: DATOS_DEMO.clientes.length },
-            { label:'VIP',      value: DATOS_DEMO.clientes.filter(c=>c.tag==='vip').length },
-            { label:'Regulares',value: DATOS_DEMO.clientes.filter(c=>c.tag==='regular').length },
-            { label:'Nuevos',   value: DATOS_DEMO.clientes.filter(c=>c.tag==='nuevo').length },
+            { label:'Total', value: DATOS_DEMO.clientes.length },
+            { label:'VIP',   value: DATOS_DEMO.clientes.filter(c=>c.tag==='vip').length },
           ].map(s => (
-            <div key={s.label} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'12px 14px' }}>
-              <div style={{ fontSize:10, color:'#6B9080', fontWeight:600, textTransform:'uppercase', marginBottom:4 }}>{s.label}</div>
-              <div style={{ fontSize:22, fontWeight:700, color:'#0B1E16', fontFamily:'DM Mono, monospace' }}>{s.value}</div>
+            <div key={s.label} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:10, padding:'10px 12px' }}>
+              <div style={{ fontSize:9, color:'#6B9080', fontWeight:600, textTransform:'uppercase', marginBottom:3 }}>{s.label}</div>
+              <div style={{ fontSize:20, fontWeight:700, color:'#0B1E16', fontFamily:'DM Mono, monospace' }}>{s.value}</div>
             </div>
           ))}
         </div>
         {DATOS_DEMO.clientes.map(c => {
           const t = TAG_STYLES[c.tag] || TAG_STYLES.regular;
           return (
-            <div key={c.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:36, height:36, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:700, color:'#fff', flexShrink:0 }}>
+            <div key={c.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:10, padding:'10px 12px', display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:32, height:32, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'#fff', flexShrink:0 }}>
                 {c.nombre[0]}
               </div>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{c.nombre}</div>
-                <div style={{ fontSize:12, color:'#6B9080', fontFamily:'DM Mono, monospace' }}>{c.telefono}</div>
+                <div style={{ fontSize:12.5, fontWeight:600, color:'#0B1E16', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.nombre}</div>
+                {!isSmall && <div style={{ fontSize:11, color:'#6B9080', fontFamily:'DM Mono, monospace' }}>{c.telefono}</div>}
               </div>
-              <span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:t.bg, color:t.color, flexShrink:0 }}>{t.label}</span>
+              <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:t.bg, color:t.color, flexShrink:0 }}>{t.label}</span>
             </div>
           );
         })}
@@ -199,54 +186,50 @@ export default function Demo() {
     </div>
   );
 
-  // ── SERVICIOS ──────────────────────────────────────────────
   const renderServicios = () => (
     <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto' }}>
       <Topbar titulo="Servicios"/>
-      <div style={{ padding:isMobile ? 14 : 24, display:'flex', flexDirection:'column', gap:10 }}>
+      <div style={{ padding:isSmall ? 10 : 20, display:'flex', flexDirection:'column', gap:8 }}>
         {DATOS_DEMO.servicios.map(s => (
-          <div key={s.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+          <div key={s.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:10, padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
             <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:'#0B1E16', marginBottom:3 }}>{s.nombre}</div>
-              <div style={{ fontSize:12, color:'#6B9080' }}>{s.categoria} · {s.duracion} min</div>
+              <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.nombre}</div>
+              <div style={{ fontSize:11, color:'#6B9080' }}>{s.duracion} min</div>
             </div>
-            <div style={{ fontSize:16, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace', flexShrink:0 }}>{s.precio} EUR</div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace', flexShrink:0 }}>{s.precio}€</div>
           </div>
         ))}
       </div>
     </div>
   );
 
-  // ── EMPLEADOS ──────────────────────────────────────────────
   const renderEmpleados = () => (
     <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto' }}>
       <Topbar titulo="Empleados"/>
-      <div style={{ padding:isMobile ? 14 : 24, display:'flex', flexDirection:'column', gap:12 }}>
+      <div style={{ padding:isSmall ? 10 : 20, display:'flex', flexDirection:'column', gap:10 }}>
         {DATOS_DEMO.empleados.map(emp => (
-          <div key={emp.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-            <div style={{ background:emp.color+'18', padding:'16px', display:'flex', alignItems:'center', gap:12, borderBottom:'1px solid #EAF5EF' }}>
-              <div style={{ width:44, height:44, borderRadius:'50%', background:emp.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'#fff', flexShrink:0 }}>
+          <div key={emp.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, overflow:'hidden' }}>
+            <div style={{ background:emp.color+'18', padding:'12px 14px', display:'flex', alignItems:'center', gap:10, borderBottom:'1px solid #EAF5EF' }}>
+              <div style={{ width:38, height:38, borderRadius:'50%', background:emp.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:700, color:'#fff', flexShrink:0 }}>
                 {emp.nombre[0]}
               </div>
-              <div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{emp.nombre}</div>
-                <div style={{ fontSize:11.5, color:'#6B9080' }}>Empleada activa</div>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{emp.nombre}</div>
+                <div style={{ fontSize:11, color:'#6B9080' }}>Empleada activa</div>
               </div>
             </div>
-            <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:8 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
+            <div style={{ padding:'10px 14px', display:'flex', flexDirection:'column', gap:6 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
                 <span style={{ color:'#6B9080' }}>Comisión</span>
-                <span style={{ fontWeight:600, color:'#0A9E6E' }}>
-                  {emp.tipo_comision === 'porcentaje' ? `${emp.comision_valor}%` : `${emp.comision_valor} EUR/cita`}
-                </span>
+                <span style={{ fontWeight:600, color:'#0A9E6E' }}>{emp.tipo_comision === 'porcentaje' ? `${emp.comision_valor}%` : `${emp.comision_valor}€/cita`}</span>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
                 <span style={{ color:'#6B9080' }}>Citas este mes</span>
-                <span style={{ fontWeight:600, color:'#0B1E16', fontFamily:'DM Mono, monospace' }}>{emp.citas}</span>
+                <span style={{ fontWeight:600, color:'#0B1E16' }}>{emp.citas}</span>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
                 <span style={{ color:'#6B9080' }}>Facturado</span>
-                <span style={{ fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace' }}>{emp.facturado} EUR</span>
+                <span style={{ fontWeight:700, color:'#0A9E6E' }}>{emp.facturado}€</span>
               </div>
             </div>
           </div>
@@ -255,27 +238,25 @@ export default function Demo() {
     </div>
   );
 
-  // ── STOCK ──────────────────────────────────────────────────
   const renderStock = () => (
     <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto' }}>
       <Topbar titulo="Stock"/>
-      <div style={{ padding:isMobile ? 14 : 24, display:'flex', flexDirection:'column', gap:10 }}>
+      <div style={{ padding:isSmall ? 10 : 20, display:'flex', flexDirection:'column', gap:8 }}>
         {DATOS_DEMO.stock.map(p => {
           const sinStock = p.stock_actual === 0;
           const bajo = p.stock_actual > 0 && p.stock_actual <= p.stock_minimo;
           return (
-            <div key={p.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+            <div key={p.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:10, padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16', marginBottom:3 }}>{p.nombre}</div>
-                <div style={{ fontSize:12, color:'#6B9080' }}>{p.categoria}</div>
+                <div style={{ fontSize:12.5, fontWeight:600, color:'#0B1E16', marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.nombre}</div>
+                <div style={{ fontSize:11, color:'#6B9080' }}>{p.categoria}</div>
               </div>
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
-                <span style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono, monospace', color: sinStock ? '#EF4444' : bajo ? '#F59E0B' : '#0A9E6E' }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:3, flexShrink:0 }}>
+                <span style={{ fontSize:13, fontWeight:700, fontFamily:'DM Mono, monospace', color: sinStock ? '#EF4444' : bajo ? '#F59E0B' : '#0A9E6E' }}>
                   {p.stock_actual} uds
                 </span>
-                {sinStock && <span style={{ fontSize:10, background:'#FEF2F2', color:'#EF4444', padding:'1px 6px', borderRadius:10, fontWeight:600 }}>Sin stock</span>}
-                {bajo && <span style={{ fontSize:10, background:'#FFF8E7', color:'#F59E0B', padding:'1px 6px', borderRadius:10, fontWeight:600 }}>Stock bajo</span>}
-                <span style={{ fontSize:12, fontWeight:700, color:'#0B1E16', fontFamily:'DM Mono, monospace' }}>{p.precio_venta} EUR</span>
+                {sinStock && <span style={{ fontSize:9, background:'#FEF2F2', color:'#EF4444', padding:'1px 5px', borderRadius:8, fontWeight:600 }}>Sin stock</span>}
+                {bajo && <span style={{ fontSize:9, background:'#FFF8E7', color:'#F59E0B', padding:'1px 5px', borderRadius:8, fontWeight:600 }}>Bajo</span>}
               </div>
             </div>
           );
@@ -293,76 +274,74 @@ export default function Demo() {
     stock:     renderStock,
   };
 
-  // ── LAYOUT MÓVIL ───────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <div style={{ display:'flex', flexDirection:'column', height:'100vh', background:'#F4FAF7', fontFamily:'DM Sans, system-ui, sans-serif' }}>
-        {/* Contenido */}
-        <div style={{ flex:1, overflowY:'auto' }}>
-          {renders[pantalla] ? renders[pantalla]() : renderDashboard()}
-        </div>
-
-        {/* Bottom nav */}
-        <div style={{ background:'#fff', borderTop:'1px solid #EAF5EF', display:'flex', justifyContent:'space-around', padding:'8px 0 12px', flexShrink:0 }}>
-          {NAV_ITEMS.map(item => (
-            <div key={item.id} onClick={() => setPantalla(item.id)}
-              style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, cursor:'pointer', padding:'4px 8px', borderRadius:8,
-                color: pantalla===item.id ? '#0A9E6E' : '#A8C4B8',
-              }}>
-              <span style={{ fontSize:20 }}>{item.emoji}</span>
-              <span style={{ fontSize:9.5, fontWeight: pantalla===item.id ? 700 : 500 }}>{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // ── LAYOUT DESKTOP ─────────────────────────────────────────
+  // ── LAYOUT ÚNICO — sidebar siempre visible ─────────────────
   return (
-    <div style={{ display:'flex', height:'100vh', background:'#F4FAF7', fontFamily:'DM Sans, system-ui, sans-serif' }}>
-      {/* Sidebar */}
-      <div style={{ background:'#063D2A', width:220, height:'100vh', display:'flex', flexDirection:'column', flexShrink:0 }}>
-        <div style={{ padding:'24px 20px 16px', display:'flex', alignItems:'center', gap:8 }}>
-          <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+    <div style={{ display:'flex', height:'100vh', background:'#F4FAF7', fontFamily:'DM Sans, system-ui, sans-serif', overflow:'hidden' }}>
+
+      {/* Sidebar — se estrecha en móvil pero siempre visible */}
+      <div style={{ background:'#063D2A', width:sidebarW, height:'100vh', display:'flex', flexDirection:'column', flexShrink:0, transition:'width 0.2s' }}>
+
+        {/* Logo */}
+        <div style={{ padding: isSmall ? '20px 0 12px' : '20px 16px 12px', display:'flex', alignItems:'center', justifyContent: isSmall ? 'center' : 'flex-start', gap:8 }}>
+          <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
             <path d="M10 42L10 8C10 5 12 4 14 4L28 4C38 4 44 10 44 18C44 26 38 32 28 32L10 32M21 32L44 42"
               stroke="white" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
             <circle cx="21" cy="32" r="4.5" fill="white"/>
             <circle cx="21" cy="32" r="2.2" fill="#063D2A"/>
           </svg>
-          <span style={{ fontSize:16, fontWeight:700, color:'#fff' }}>Reservly</span>
-          <span style={{ fontSize:9, background:'#0A9E6E', color:'#fff', padding:'2px 6px', borderRadius:10, fontWeight:700 }}>DEMO</span>
+          {!isSmall && (
+            <>
+              <span style={{ fontSize:15, fontWeight:700, color:'#fff' }}>Reservly</span>
+              <span style={{ fontSize:8, background:'#0A9E6E', color:'#fff', padding:'2px 5px', borderRadius:8, fontWeight:700 }}>DEMO</span>
+            </>
+          )}
         </div>
-        <div style={{ padding:'0 10px', flex:1 }}>
+
+        {/* Nav items */}
+        <div style={{ padding: isSmall ? '0 6px' : '0 8px', flex:1 }}>
           {NAV_ITEMS.map(item => (
             <div key={item.id} onClick={() => setPantalla(item.id)}
-              style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:8, cursor:'pointer', marginBottom:2,
+              style={{
+                display:'flex', alignItems:'center', gap: isSmall ? 0 : 10,
+                justifyContent: isSmall ? 'center' : 'flex-start',
+                padding: isSmall ? '10px 0' : '8px 10px',
+                borderRadius:8, cursor:'pointer', marginBottom:2,
                 background: pantalla===item.id ? '#0A9E6E' : 'transparent',
-                color: pantalla===item.id ? '#fff' : '#ffffff80',
-                fontSize:13.5, fontWeight: pantalla===item.id ? 600 : 500,
+                color: pantalla===item.id ? '#fff' : '#ffffff70',
+                fontSize:13,
               }}>
-              <span>{item.emoji}</span>
-              <span>{item.label}</span>
+              <span style={{ fontSize: isSmall ? 18 : 16 }}>{item.emoji}</span>
+              {!isSmall && <span style={{ fontWeight: pantalla===item.id ? 600 : 400 }}>{item.label}</span>}
             </div>
           ))}
         </div>
-        <div style={{ padding:14, borderTop:'1px solid #ffffff10' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-            <div style={{ width:30, height:30, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#fff' }}>P</div>
-            <div>
-              <div style={{ fontSize:12, fontWeight:600, color:'#fff' }}>Peluquería Demo</div>
-              <div style={{ fontSize:10, color:'#0A9E6E' }}>Plan Pro · Demo</div>
+
+        {/* Footer sidebar */}
+        {!isSmall && (
+          <div style={{ padding:'12px', borderTop:'1px solid #ffffff10' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+              <div style={{ width:28, height:28, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#fff', flexShrink:0 }}>P</div>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Peluquería Demo</div>
+                <div style={{ fontSize:9, color:'#0A9E6E' }}>Plan Pro · Demo</div>
+              </div>
             </div>
+            <button onClick={() => navigate('/login')}
+              style={{ width:'100%', background:'#0A9E6E', border:'none', borderRadius:7, padding:'7px', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+              Crear cuenta gratis →
+            </button>
           </div>
-          <button onClick={() => navigate('/login')}
-            style={{ width:'100%', background:'#0A9E6E', border:'none', borderRadius:8, padding:'8px', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-            Crear mi cuenta gratis →
-          </button>
-        </div>
+        )}
+
+        {isSmall && (
+          <div style={{ padding:'12px 0', borderTop:'1px solid #ffffff10', display:'flex', justifyContent:'center' }}>
+            <div style={{ width:28, height:28, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#fff' }}>P</div>
+          </div>
+        )}
       </div>
 
       {/* Contenido */}
-      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minWidth:0 }}>
         {renders[pantalla] ? renders[pantalla]() : renderDashboard()}
       </div>
     </div>

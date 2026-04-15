@@ -53,7 +53,7 @@ export default function Clientes() {
   useEffect(() => {
     if (!negocio) return;
     fetchClientes();
-  }, [negocio]);
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchClientes = async () => {
     const { data } = await supabase
@@ -83,9 +83,7 @@ export default function Clientes() {
     }
   };
 
-  const resetFiltros = () => {
-    setPagina(1);
-  };
+  const resetFiltros = () => setPagina(1);
 
   const filtrados = clientes.filter(c => {
     const matchB = c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -111,9 +109,22 @@ export default function Clientes() {
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
+      {/* Topbar */}
       <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:16 }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Clientes</div>
-        <div style={{ marginLeft:'auto' }}>
+        <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
+          {!isMobile && (
+            <>
+              <button onClick={() => exportarExcel.clientes(clientes, negocio?.nombre)}
+                style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+                📊 Excel
+              </button>
+              <button onClick={() => exportarPDF.clientes(clientes, negocio?.nombre)}
+                style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+                📄 PDF
+              </button>
+            </>
+          )}
           <button onClick={() => setShowForm(!showForm)}
             style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
             + Añadir
@@ -213,20 +224,14 @@ export default function Clientes() {
 
         {/* Filtros */}
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-
-          {/* Búsqueda */}
-          <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:8 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, padding:'7px 14px', flex:1 }}>
-              <span style={{ color:'#A8C4B8' }}>🔍</span>
-              <input value={busqueda} onChange={e => { setBusqueda(e.target.value); resetFiltros(); }}
-                placeholder="Buscar por nombre o teléfono..."
-                style={{ border:'none', outline:'none', fontSize:13, color:'#0B1E16', background:'transparent', width:'100%' }}/>
-            </div>
+          <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, padding:'7px 14px' }}>
+            <span style={{ color:'#A8C4B8' }}>🔍</span>
+            <input value={busqueda} onChange={e => { setBusqueda(e.target.value); resetFiltros(); }}
+              placeholder="Buscar por nombre o teléfono..."
+              style={{ border:'none', outline:'none', fontSize:13, color:'#0B1E16', background:'transparent', width:'100%' }}/>
           </div>
 
-          {/* Filtros por tag, sexo y edad */}
           <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:8, flexWrap:'wrap' }}>
-
             {/* Tag */}
             <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
               {['todos','vip','regular','nuevo','inactivo'].map(f => (
@@ -243,10 +248,10 @@ export default function Clientes() {
             {/* Sexo */}
             <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
               {[
-                { k:'todos',  label:'♀♂ Todos' },
-                { k:'mujer',  label:'♀ Mujer'  },
-                { k:'hombre', label:'♂ Hombre' },
-                { k:'otro',   label:'Otro'      },
+                { k:'todos',  label:'Todos' },
+                { k:'mujer',  label:'Mujer'  },
+                { k:'hombre', label:'Hombre' },
+                { k:'otro',   label:'Otro'   },
               ].map(f => (
                 <button key={f.k} onClick={() => { setFiltroSexo(f.k); resetFiltros(); }} style={{
                   padding:'6px 10px', fontSize:11.5, fontWeight:500,
@@ -257,16 +262,7 @@ export default function Clientes() {
                 }}>{f.label}</button>
               ))}
             </div>
-<div style={{ display:'flex', gap:6 }}>
-  <button onClick={() => exportarExcel.clientes(clientes, negocio?.nombre)}
-    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-    📊 Excel
-  </button>
-  <button onClick={() => exportarPDF.clientes(clientes, negocio?.nombre)}
-    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-    📄 PDF
-  </button>
-</div>
+
             {/* Edad */}
             <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', flexWrap:'wrap' }}>
               {[
@@ -286,10 +282,8 @@ export default function Clientes() {
                 }}>{f.label}</button>
               ))}
             </div>
-
           </div>
 
-          {/* Resumen filtros activos */}
           {(filtroTag !== 'todos' || filtroSexo !== 'todos' || filtroEdad !== 'todos' || busqueda) && (
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <span style={{ fontSize:12, color:'#6B9080' }}>{filtrados.length} resultados</span>
@@ -374,7 +368,6 @@ export default function Clientes() {
               </div>
             )}
 
-            {/* Paginación */}
             {totalPaginas > 1 && (
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
                 <div style={{ fontSize:12, color:'#A8C4B8' }}>
