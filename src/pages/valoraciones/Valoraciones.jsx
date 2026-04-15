@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import PlanGate from '../../components/PlanGate';
+import { usePlan } from '../../hooks/usePlan';
 
 const Estrellas = ({ valor, max = 5, size = 14 }) => (
   <div style={{ display:'flex', gap:2 }}>

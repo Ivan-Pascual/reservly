@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import PlanGate from '../../components/PlanGate';
+import { usePlan } from '../../hooks/usePlan';
 
 export default function Comisiones() {
   const { negocio } = useNegocio();
