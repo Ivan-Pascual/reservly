@@ -151,6 +151,12 @@ export default function Reservas() {
     fetchTodo();
   };
 
+  const copiarLinkResena = (r) => {
+    const url = `https://getreservly.com/resena/${negocio?.slug}/${r.id}`;
+    navigator.clipboard.writeText(url);
+    alert('Link de reseña copiado. Envíaselo al cliente por WhatsApp o SMS.');
+  };
+
   const filtradas = reservas.filter(r => {
     const matchF = filtro === 'todas' || r.estado === filtro;
     const matchB = (r.clientes?.nombre || '').toLowerCase().includes(busqueda.toLowerCase());
@@ -209,8 +215,6 @@ export default function Reservas() {
               </div>
             )}
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-
-              {/* Cliente */}
               <div>
                 <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Cliente *</div>
                 <div style={{ display:'flex', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', marginBottom:8 }}>
@@ -251,7 +255,6 @@ export default function Reservas() {
                 )}
               </div>
 
-              {/* Empleado y Servicio */}
               <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:10 }}>
                 <div>
                   <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Empleado</div>
@@ -271,7 +274,6 @@ export default function Reservas() {
                 </div>
               </div>
 
-              {/* Fecha, hora y estado */}
               <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap:10 }}>
                 <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
                   <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Fecha *</div>
@@ -299,15 +301,14 @@ export default function Reservas() {
                 </div>
               </div>
 
-              {/* Notas */}
               <div>
                 <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Notas internas</div>
                 <input value={form.notas} onChange={e=>setForm({...form, notas:e.target.value})}
                   placeholder="Notas internas sobre la reserva..."
                   style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
               </div>
-
             </div>
+
             <div style={{ display:'flex', gap:8, marginTop:16 }}>
               <button onClick={guardarReserva} disabled={saving}
                 style={{ background: saving ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer' }}>
@@ -383,6 +384,12 @@ export default function Reservas() {
                             Cobrar
                           </button>
                         )}
+                        {esCompletada && (
+                          <button onClick={() => copiarLinkResena(r)}
+                            style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:8, cursor:'pointer' }}>
+                            ⭐ Reseña
+                          </button>
+                        )}
                         {r.estado !== 'cancelada' && r.estado !== 'completada' && (
                           <button onClick={() => eliminarReserva(r.id)}
                             style={{ padding:'7px 12px', fontSize:12, fontWeight:600, background:'#FEF2F2', color:'#EF4444', border:'none', borderRadius:8, cursor:'pointer' }}>
@@ -399,7 +406,7 @@ export default function Reservas() {
               </div>
             ) : (
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 140px', padding:'10px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF', gap:12 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 160px', padding:'10px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF', gap:12 }}>
                   {['Cliente','Servicio','Empleado','Fecha','Hora','Estado',''].map(h=>(
                     <div key={h} style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</div>
                   ))}
@@ -408,7 +415,7 @@ export default function Reservas() {
                   const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
                   const esCompletada = r.estado === 'completada';
                   return (
-                    <div key={r.id} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 140px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
+                    <div key={r.id} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 160px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
                       onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
                       onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                     >
@@ -432,6 +439,12 @@ export default function Reservas() {
                           <button onClick={() => navigate(`/tpv/${r.id}`)}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#063D2A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer' }}>
                             Cobrar
+                          </button>
+                        )}
+                        {esCompletada && (
+                          <button onClick={() => copiarLinkResena(r)}
+                            style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:6, cursor:'pointer' }}>
+                            ⭐ Reseña
                           </button>
                         )}
                         {r.estado !== 'cancelada' && r.estado !== 'completada' && (
@@ -486,7 +499,6 @@ export default function Reservas() {
             </button>
           </div>
         )}
-
       </div>
     </div>
   );

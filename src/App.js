@@ -7,6 +7,7 @@ import Onboarding from './pages/onboarding/Onboarding';
 import Dashboard from './pages/dashboard/Dashboard';
 import Reservas from './pages/reservas/Reservas';
 import Clientes from './pages/clientes/Clientes';
+import DejarResena from './pages/resenas/DejarResena';
 import FichaCliente from './pages/clientes/FichaCliente';
 import Empleados from './pages/empleados/Empleados';
 import Servicios from './pages/servicios/Servicios';
@@ -186,6 +187,7 @@ export default function App() {
                   <Route path="/vacaciones"          element={<Vacaciones />} />
                   <Route path="/stock"               element={<Stock />} />
                   <Route path="/qr" element={<QRImprimible />} />
+                  <Route path="/resena/:slug/:reservaId" element={<DejarResena />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
                   <Route path="/pago/exito"          element={<PagoExito />} />
                   <Route path="/pago/cancelado"      element={<PagoCancelado />} />
