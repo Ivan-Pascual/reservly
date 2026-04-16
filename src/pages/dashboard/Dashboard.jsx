@@ -215,7 +215,31 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
-
+{/* Banner trial */}
+{negocio?.plan === 'trial' && (() => {
+  const expiry = negocio?.plan_expiry ? new Date(negocio.plan_expiry) : null;
+  const dias = expiry ? Math.max(0, Math.ceil((expiry - new Date()) / (1000*60*60*24))) : 30;
+  if (dias > 7) return null;
+  return (
+    <div style={{ background: dias <= 3 ? '#FEF2F2' : '#FFF8E7', borderBottom:`1px solid ${dias <= 3 ? '#FECACA' : '#F5E4A0'}`, padding:'10px 24px', display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+      <span style={{ fontSize:16 }}>{dias <= 3 ? '⚠️' : '⏰'}</span>
+      <div style={{ flex:1 }}>
+        <span style={{ fontSize:13, fontWeight:600, color: dias <= 3 ? '#991B1B' : '#92400E' }}>
+          {dias === 0
+            ? 'Tu periodo de prueba ha expirado.'
+            : `Tu periodo de prueba termina en ${dias} ${dias === 1 ? 'día' : 'días'}.`}
+        </span>
+        <span style={{ fontSize:13, color: dias <= 3 ? '#B91C1C' : '#92400E', marginLeft:6 }}>
+          Elige un plan para no perder el acceso.
+        </span>
+      </div>
+      <button onClick={() => navigate('/ajustes')}
+        style={{ background: dias <= 3 ? '#EF4444' : '#F59E0B', color:'#fff', border:'none', padding:'6px 16px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+        Ver planes →
+      </button>
+    </div>
+  );
+})()}
       {/* Banner pago exitoso */}
       {pagoExitoso && (
         <div style={{ background:'#063D2A', padding:'14px 24px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
