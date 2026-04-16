@@ -11,7 +11,10 @@ const CATEGORIAS_COLORES = {
   Otros:        { bg:'#F1F5F9', color:'#6B9080' },
 };
 
-const formVacio = { nombre:'', categoria:'', duracion:45, precio:'', precio_a_consultar:false };
+const formVacio = {
+  nombre:'', categoria:'', duracion:45, precio:'',
+  precio_a_consultar:false, preguntas:[],
+};
 
 export default function Servicios() {
   const { negocio } = useNegocio();
@@ -27,7 +30,7 @@ export default function Servicios() {
   useEffect(() => {
     if (!negocio) return;
     fetchServicios();
-  }, [negocio]);
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchServicios = async () => {
     const { data } = await supabase
@@ -45,6 +48,7 @@ export default function Servicios() {
       duracion:           s.duracion,
       precio:             s.precio || '',
       precio_a_consultar: s.precio_a_consultar || false,
+      preguntas:          s.preguntas || [],
     });
     setShowForm(true);
   };
@@ -64,6 +68,7 @@ export default function Servicios() {
       duracion:           parseInt(form.duracion) || 45,
       precio:             form.precio_a_consultar ? null : parseFloat(form.precio) || null,
       precio_a_consultar: form.precio_a_consultar,
+      preguntas:          form.preguntas.filter(p => p.trim()),
     };
     if (editando) {
       await supabase.from('servicios').update(payload).eq('id', editando);
@@ -78,6 +83,21 @@ export default function Servicios() {
   const toggleActivo = async (id, activo) => {
     await supabase.from('servicios').update({ activo: !activo }).eq('id', id);
     fetchServicios();
+  };
+
+  const añadirPregunta = () => {
+    if (form.preguntas.length >= 3) return;
+    setForm({ ...form, preguntas: [...form.preguntas, ''] });
+  };
+
+  const actualizarPregunta = (i, val) => {
+    const nuevas = [...form.preguntas];
+    nuevas[i] = val;
+    setForm({ ...form, preguntas: nuevas });
+  };
+
+  const eliminarPregunta = (i) => {
+    setForm({ ...form, preguntas: form.preguntas.filter((_, j) => j !== i) });
   };
 
   const filtrados = servicios.filter(s =>
@@ -159,6 +179,7 @@ export default function Servicios() {
                     style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace', opacity: form.precio_a_consultar ? 0.5 : 1 }}/>
                 </div>
               </div>
+
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                 <input type="checkbox" id="consultar" checked={form.precio_a_consultar}
                   onChange={e => setForm({...form, precio_a_consultar:e.target.checked, precio:''})}
@@ -167,8 +188,62 @@ export default function Servicios() {
                   Precio a consultar
                 </label>
               </div>
+
+              {/* Preguntas de admisión */}
+              <div style={{ borderTop:'1px solid #EAF5EF', paddingTop:14, marginTop:4 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                  <div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#0B1E16' }}>Preguntas al cliente</div>
+                    <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:2 }}>
+                      Opcionales · Máximo 3 · Solo para este servicio
+                    </div>
+                  </div>
+                  {form.preguntas.length < 3 && (
+                    <button onClick={añadirPregunta}
+                      style={{ padding:'5px 12px', background:'#E8F7F2', color:'#0A9E6E', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                      + Añadir
+                    </button>
+                  )}
+                </div>
+
+                {form.preguntas.length === 0 ? (
+                  <div style={{ padding:'12px 14px', background:'#F4FAF7', borderRadius:8, fontSize:12.5, color:'#A8C4B8', fontStyle:'italic' }}>
+                    Sin preguntas — el cliente no verá ningún formulario para este servicio
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {form.preguntas.map((p, i) => (
+                      <div key={i} style={{ display:'flex', gap:8, alignItems:'center' }}>
+                        <div style={{ width:22, height:22, borderRadius:'50%', background:'#E8F7F2', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#0A9E6E', flexShrink:0 }}>
+                          {i+1}
+                        </div>
+                        <input value={p} onChange={e => actualizarPregunta(i, e.target.value)}
+                          placeholder={[
+                            '¿Tienes alguna alergia a productos?',
+                            '¿Es tu primera visita?',
+                            '¿Algo más que deba saber?',
+                          ][i] || 'Escribe tu pregunta...'}
+                          style={{ flex:1, padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}
+                          onFocus={e=>e.target.style.borderColor='#0A9E6E'}
+                          onBlur={e=>e.target.style.borderColor='#D6EDE5'}/>
+                        <button onClick={() => eliminarPregunta(i)}
+                          style={{ background:'transparent', border:'none', color:'#A8C4B8', fontSize:16, cursor:'pointer', padding:'0 4px', flexShrink:0 }}>
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {form.preguntas.length > 0 && (
+                  <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:8 }}>
+                    💡 El cliente verá estas preguntas antes de confirmar. Todas son opcionales.
+                  </div>
+                )}
+              </div>
             </div>
-            <div style={{ display:'flex', gap:8, marginTop:14 }}>
+
+            <div style={{ display:'flex', gap:8, marginTop:16 }}>
               <button onClick={guardarServicio} disabled={saving}
                 style={{ background: saving ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer' }}>
                 {saving ? 'Guardando...' : editando ? 'Guardar cambios' : 'Guardar servicio'}
@@ -199,10 +274,18 @@ export default function Servicios() {
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {filtrados.map(s => {
                 const cat = CATEGORIAS_COLORES[s.categoria] || CATEGORIAS_COLORES.Otros;
+                const tienePreguntas = s.preguntas?.length > 0;
                 return (
                   <div key={s.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:14 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
-                      <div style={{ fontSize:14, fontWeight:700, color: s.activo ? '#0B1E16' : '#A8C4B8' }}>{s.nombre}</div>
+                      <div>
+                        <div style={{ fontSize:14, fontWeight:700, color: s.activo ? '#0B1E16' : '#A8C4B8' }}>{s.nombre}</div>
+                        {tienePreguntas && (
+                          <div style={{ fontSize:11, color:'#0A9E6E', marginTop:2 }}>
+                            💬 {s.preguntas.length} {s.preguntas.length===1?'pregunta':'preguntas'}
+                          </div>
+                        )}
+                      </div>
                       <span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:cat.bg, color:cat.color }}>{s.categoria || 'General'}</span>
                     </div>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
@@ -230,19 +313,27 @@ export default function Servicios() {
             </div>
           ) : (
             <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 80px 100px', padding:'10px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF', gap:12 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 80px 120px', padding:'10px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF', gap:12 }}>
                 {['Servicio','Categoría','Duración','Precio','Estado',''].map(h=>(
                   <div key={h} style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</div>
                 ))}
               </div>
               {filtrados.map((s, i) => {
                 const cat = CATEGORIAS_COLORES[s.categoria] || CATEGORIAS_COLORES.Otros;
+                const tienePreguntas = s.preguntas?.length > 0;
                 return (
-                  <div key={s.id} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 80px 100px', padding:'14px 20px', borderBottom: i<filtrados.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
+                  <div key={s.id} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 80px 120px', padding:'14px 20px', borderBottom: i<filtrados.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
                     onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
                     onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                   >
-                    <div style={{ fontSize:13.5, fontWeight:600, color: s.activo ? '#0B1E16' : '#A8C4B8' }}>{s.nombre}</div>
+                    <div>
+                      <div style={{ fontSize:13.5, fontWeight:600, color: s.activo ? '#0B1E16' : '#A8C4B8' }}>{s.nombre}</div>
+                      {tienePreguntas && (
+                        <div style={{ fontSize:11, color:'#0A9E6E', marginTop:2 }}>
+                          💬 {s.preguntas.length} {s.preguntas.length===1?'pregunta':'preguntas'}
+                        </div>
+                      )}
+                    </div>
                     <div><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:cat.bg, color:cat.color }}>{s.categoria || 'General'}</span></div>
                     <div style={{ fontSize:13, fontFamily:'DM Mono, monospace', color:'#6B9080' }}>{s.duracion} min</div>
                     <div style={{ fontSize:14, fontFamily:'DM Mono, monospace', fontWeight:700, color: s.activo ? '#0A9E6E' : '#A8C4B8' }}>
@@ -280,7 +371,6 @@ export default function Servicios() {
             </button>
           </div>
         )}
-
       </div>
     </div>
   );
