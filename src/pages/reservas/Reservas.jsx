@@ -49,7 +49,7 @@ export default function Reservas() {
   const fetchTodo = async () => {
     const [resRes, cliRes, empRes, serRes] = await Promise.all([
       supabase.from('reservas').select(`
-        *, clientes(nombre), empleados(nombre, color), servicios(nombre, duracion, precio)
+        *, clientes(nombre, telefono), empleados(nombre, color), servicios(nombre, duracion, precio)
       `).eq('negocio_id', negocio.id).order('fecha', { ascending:false }).order('hora_inicio'),
       supabase.from('clientes').select('id, nombre').eq('negocio_id', negocio.id),
       supabase.from('empleados').select('id, nombre, color').eq('negocio_id', negocio.id).eq('activo', true),
@@ -135,9 +135,66 @@ export default function Reservas() {
         setSaving(false);
         return;
       }
+
       await supabase.from('reservas').update(payload).eq('id', editando);
+
+      // Si se marca como completada, registrar en TPV automáticamente
+      if (form.estado === 'completada' && reservaActual?.estado !== 'completada') {
+        const servicio = servicios.find(s => s.id === form.servicio_id);
+        const precio = servicio?.precio || 0;
+
+        const { data: tpvExistente } = await supabase
+          .from('tpv').select('id').eq('reserva_id', editando).single();
+
+        if (!tpvExistente) {
+          const { data: tpv } = await supabase.from('tpv').insert({
+            reserva_id:  editando,
+            negocio_id:  negocio.id,
+            metodo_pago: 'efectivo',
+            importe:     precio,
+            propina:     0,
+          }).select().single();
+
+          if (tpv) {
+            await supabase.from('reservas').update({ precio_final: precio }).eq('id', editando);
+            if (servicio) {
+              await supabase.from('tpv_productos').insert({
+                tpv_id: tpv.id,
+                nombre: servicio.nombre,
+                precio: precio,
+              });
+            }
+          }
+        }
+      }
     } else {
-      await supabase.from('reservas').insert({ ...payload, negocio_id: negocio.id });
+      const { data: nuevaReserva } = await supabase
+        .from('reservas').insert({ ...payload, negocio_id: negocio.id })
+        .select().single();
+
+      if (form.estado === 'completada' && nuevaReserva) {
+        const servicio = servicios.find(s => s.id === form.servicio_id);
+        const precio = servicio?.precio || 0;
+
+        const { data: tpv } = await supabase.from('tpv').insert({
+          reserva_id:  nuevaReserva.id,
+          negocio_id:  negocio.id,
+          metodo_pago: 'efectivo',
+          importe:     precio,
+          propina:     0,
+        }).select().single();
+
+        if (tpv) {
+          await supabase.from('reservas').update({ precio_final: precio }).eq('id', nuevaReserva.id);
+          if (servicio) {
+            await supabase.from('tpv_productos').insert({
+              tpv_id: tpv.id,
+              nombre: servicio.nombre,
+              precio: precio,
+            });
+          }
+        }
+      }
     }
 
     cerrarForm();
@@ -154,7 +211,14 @@ export default function Reservas() {
   const copiarLinkResena = (r) => {
     const url = `https://getreservly.com/resena/${negocio?.slug}/${r.id}`;
     navigator.clipboard.writeText(url);
-    alert('Link de reseña copiado. Envíaselo al cliente por WhatsApp o SMS.');
+    alert('Link de reseña copiado.');
+  };
+
+  const linkWA = (r) => {
+    const tel = r.clientes?.telefono?.replace(/\s/g,'').replace('+','') || '';
+    const link = `https://getreservly.com/resena/${negocio?.slug}/${r.id}`;
+    const msg = encodeURIComponent(`Hola ${r.clientes?.nombre || ''}! Gracias por tu visita 😊 ¿Nos dejas una reseña? ${link}`);
+    return `https://wa.me/${tel}?text=${msg}`;
   };
 
   const filtradas = reservas.filter(r => {
@@ -166,7 +230,6 @@ export default function Reservas() {
 
   const totalPaginas = Math.ceil(filtradas.length / POR_PAGINA);
   const paginadas = filtradas.slice((pagina-1)*POR_PAGINA, pagina*POR_PAGINA);
-
   const pad = isMobile ? 16 : 32;
 
   if (loading) return (
@@ -179,9 +242,9 @@ export default function Reservas() {
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
       {/* Topbar */}
-      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:10 }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Reservas</div>
-        <div style={{ marginLeft:'auto', display:'flex', gap:6, flexWrap:'wrap' }}>
+        <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
           {!isMobile && (
             <>
               <button onClick={() => exportarExcel.reservas(reservas, negocio?.nombre)}
@@ -239,16 +302,13 @@ export default function Reservas() {
                   </select>
                 ) : (
                   <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                    <input value={clienteNuevo.nombre}
-                      onChange={e=>setClienteNuevo({...clienteNuevo, nombre:e.target.value})}
+                    <input value={clienteNuevo.nombre} onChange={e=>setClienteNuevo({...clienteNuevo, nombre:e.target.value})}
                       placeholder="Nombre *"
                       style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
-                    <input value={clienteNuevo.telefono}
-                      onChange={e=>setClienteNuevo({...clienteNuevo, telefono:e.target.value})}
+                    <input value={clienteNuevo.telefono} onChange={e=>setClienteNuevo({...clienteNuevo, telefono:e.target.value})}
                       placeholder="Teléfono"
                       style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
-                    <input value={clienteNuevo.email}
-                      onChange={e=>setClienteNuevo({...clienteNuevo, email:e.target.value})}
+                    <input value={clienteNuevo.email} onChange={e=>setClienteNuevo({...clienteNuevo, email:e.target.value})}
                       placeholder="Email (opcional)" type="email"
                       style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
                   </div>
@@ -297,6 +357,7 @@ export default function Reservas() {
                     <option value="confirmada">Confirmada</option>
                     <option value="pendiente">Pendiente</option>
                     <option value="cancelada">Cancelada</option>
+                    <option value="completada">Completada</option>
                   </select>
                 </div>
               </div>
@@ -307,6 +368,12 @@ export default function Reservas() {
                   placeholder="Notas internas sobre la reserva..."
                   style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
               </div>
+
+              {form.estado === 'completada' && (
+                <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#063D2A' }}>
+                  ✓ Al guardar se registrará automáticamente el cobro y se calcularán las comisiones del empleado.
+                </div>
+              )}
             </div>
 
             <div style={{ display:'flex', gap:8, marginTop:16 }}>
@@ -371,8 +438,8 @@ export default function Reservas() {
                         <span style={{ fontSize:12, color:'#6B9080' }}>{r.empleados?.nombre || '—'}</span>
                         <span style={{ fontSize:12, color:'#A8C4B8', marginLeft:'auto', fontFamily:'DM Mono, monospace' }}>{r.fecha} · {r.hora_inicio?.slice(0,5)}</span>
                       </div>
-                      <div style={{ display:'flex', gap:6 }}>
-                        {!esCompletada && (
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                        {!esCompletada && r.estado !== 'cancelada' && (
                           <button onClick={() => abrirEdicion(r)}
                             style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:8, cursor:'pointer' }}>
                             Editar
@@ -385,10 +452,18 @@ export default function Reservas() {
                           </button>
                         )}
                         {esCompletada && (
-                          <button onClick={() => copiarLinkResena(r)}
-                            style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:8, cursor:'pointer' }}>
-                            ⭐ Reseña
-                          </button>
+                          <>
+                            {r.clientes?.telefono && (
+                              <a href={linkWA(r)} target="_blank" rel="noopener noreferrer"
+                                style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#25D366', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', textDecoration:'none', textAlign:'center' }}>
+                                💬 Reseña
+                              </a>
+                            )}
+                            <button onClick={() => copiarLinkResena(r)}
+                              style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:8, cursor:'pointer' }}>
+                              ⭐ Link
+                            </button>
+                          </>
                         )}
                         {r.estado !== 'cancelada' && r.estado !== 'completada' && (
                           <button onClick={() => eliminarReserva(r.id)}
@@ -406,7 +481,7 @@ export default function Reservas() {
               </div>
             ) : (
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 160px', padding:'10px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF', gap:12 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 180px', padding:'10px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF', gap:12 }}>
                   {['Cliente','Servicio','Empleado','Fecha','Hora','Estado',''].map(h=>(
                     <div key={h} style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</div>
                   ))}
@@ -415,21 +490,21 @@ export default function Reservas() {
                   const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
                   const esCompletada = r.estado === 'completada';
                   return (
-                    <div key={r.id} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 160px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
+                    <div key={r.id} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 180px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
                       onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
                       onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                     >
                       <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{r.clientes?.nombre || '—'}</div>
                       <div style={{ fontSize:13, color:'#6B9080' }}>{r.servicios?.nombre || '—'}</div>
                       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                        <div style={{ width:8, height:8, borderRadius:'50%', background:r.empleados?.color||'#ccc' }}/>
+                        <div style={{ width:8, height:8, borderRadius:'50%', background:r.empleados?.color||'#ccc', flexShrink:0 }}/>
                         <span style={{ fontSize:13, color:'#0B1E16' }}>{r.empleados?.nombre || '—'}</span>
                       </div>
                       <div style={{ fontSize:12.5, color:'#6B9080' }}>{r.fecha}</div>
                       <div style={{ fontSize:12.5, fontFamily:'DM Mono, monospace', color:'#0B1E16' }}>{r.hora_inicio?.slice(0,5)}</div>
                       <div><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span></div>
                       <div style={{ display:'flex', gap:4 }}>
-                        {!esCompletada && (
+                        {!esCompletada && r.estado !== 'cancelada' && (
                           <button onClick={() => abrirEdicion(r)}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:6, cursor:'pointer' }}>
                             Editar
@@ -442,10 +517,18 @@ export default function Reservas() {
                           </button>
                         )}
                         {esCompletada && (
-                          <button onClick={() => copiarLinkResena(r)}
-                            style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:6, cursor:'pointer' }}>
-                            ⭐ Reseña
-                          </button>
+                          <>
+                            {r.clientes?.telefono && (
+                              <a href={linkWA(r)} target="_blank" rel="noopener noreferrer"
+                                style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#25D366', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', textDecoration:'none', display:'inline-flex', alignItems:'center' }}>
+                                💬 WA
+                              </a>
+                            )}
+                            <button onClick={() => copiarLinkResena(r)}
+                              style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:6, cursor:'pointer' }}>
+                              ⭐
+                            </button>
+                          </>
                         )}
                         {r.estado !== 'cancelada' && r.estado !== 'completada' && (
                           <button onClick={() => eliminarReserva(r.id)}
@@ -471,17 +554,17 @@ export default function Reservas() {
               {totalPaginas > 1 && (
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                   <button onClick={() => setPagina(p=>Math.max(1,p-1))} disabled={pagina===1}
-                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===1?'#F4FAF7':'#fff', color: pagina===1?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor: pagina===1?'not-allowed':'pointer' }}>
+                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background:pagina===1?'#F4FAF7':'#fff', color:pagina===1?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor:pagina===1?'not-allowed':'pointer' }}>
                     ← Anterior
                   </button>
                   {Array.from({ length: totalPaginas }, (_,i) => i+1).map(p => (
                     <button key={p} onClick={() => setPagina(p)}
-                      style={{ padding:'6px 10px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===p?'#0A9E6E':'#fff', color: pagina===p?'#fff':'#6B9080', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                      style={{ padding:'6px 10px', border:'1px solid #D6EDE5', borderRadius:8, background:pagina===p?'#0A9E6E':'#fff', color:pagina===p?'#fff':'#6B9080', fontSize:12, fontWeight:600, cursor:'pointer' }}>
                       {p}
                     </button>
                   ))}
                   <button onClick={() => setPagina(p=>Math.min(totalPaginas,p+1))} disabled={pagina===totalPaginas}
-                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===totalPaginas?'#F4FAF7':'#fff', color: pagina===totalPaginas?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor: pagina===totalPaginas?'not-allowed':'pointer' }}>
+                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background:pagina===totalPaginas?'#F4FAF7':'#fff', color:pagina===totalPaginas?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor:pagina===totalPaginas?'not-allowed':'pointer' }}>
                     Siguiente →
                   </button>
                 </div>
