@@ -27,57 +27,61 @@ const BarraDistribucion = ({ estrellas, total, count }) => (
 export default function Valoraciones() {
   const { negocio } = useNegocio();
   const isMobile = useIsMobile();
-  const [valoraciones, setValoraciones] = useState([]);
+  const [resenas, setResenas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('todas');
   const [respondiendo, setRespondiendo] = useState(null);
   const [respuesta, setRespuesta] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  const { puede } = usePlan();
+
   useEffect(() => {
     if (!negocio) return;
-    fetchValoraciones();
+    fetchResenas();
   }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchValoraciones = async () => {
+  const fetchResenas = async () => {
     const { data } = await supabase
-      .from('valoraciones').select('*, clientes(nombre), reservas(fecha, servicios(nombre))')
-      .eq('negocio_id', negocio.id).order('created_at', { ascending:false });
-    if (data) setValoraciones(data);
+      .from('resenas')
+      .select('*, clientes(nombre), reservas(fecha, servicios(nombre))')
+      .eq('negocio_id', negocio.id)
+      .order('created_at', { ascending: false });
+    if (data) setResenas(data);
     setLoading(false);
   };
 
   const guardarRespuesta = async (id) => {
     if (!respuesta.trim()) return;
     setGuardando(true);
-    await supabase.from('valoraciones').update({
-      respuesta_negocio: respuesta.trim(),
-      respuesta_fecha:   new Date().toISOString(),
+    await supabase.from('resenas').update({
+      respuesta:        respuesta.trim(),
+      respuesta_fecha:  new Date().toISOString(),
     }).eq('id', id);
     setRespondiendo(null);
     setRespuesta('');
-    fetchValoraciones();
+    fetchResenas();
     setGuardando(false);
   };
 
-  const filtradas = valoraciones.filter(v => {
-    if (filtro === 'todas')    return true;
-    if (filtro === '5')        return v.estrellas === 5;
-    if (filtro === '4')        return v.estrellas === 4;
-    if (filtro === 'bajas')    return v.estrellas <= 3;
-    if (filtro === 'sin_respuesta') return !v.respuesta_negocio;
+  const filtradas = resenas.filter(v => {
+    if (filtro === 'todas')         return true;
+    if (filtro === '5')             return v.puntuacion === 5;
+    if (filtro === '4')             return v.puntuacion === 4;
+    if (filtro === 'bajas')         return v.puntuacion <= 3;
+    if (filtro === 'sin_respuesta') return !v.respuesta;
     return true;
   });
 
-  const total        = valoraciones.length;
-  const media        = total > 0 ? valoraciones.reduce((a,v) => a+(v.estrellas||0), 0) / total : 0;
-  const cincoEst     = valoraciones.filter(v => v.estrellas === 5).length;
-  const sinRespuesta = valoraciones.filter(v => !v.respuesta_negocio && v.comentario).length;
+  const total        = resenas.length;
+  const media        = total > 0 ? resenas.reduce((a, v) => a + (v.puntuacion || 0), 0) / total : 0;
+  const cincoEst     = resenas.filter(v => v.puntuacion === 5).length;
+  const sinRespuesta = resenas.filter(v => !v.respuesta && v.comentario).length;
   const pad          = isMobile ? 16 : 32;
 
   const distribucion = [5,4,3,2,1].map(n => ({
     estrellas: n,
-    count: valoraciones.filter(v => v.estrellas === n).length,
+    count: resenas.filter(v => v.puntuacion === n).length,
   }));
 
   if (loading) return (
@@ -86,9 +90,8 @@ export default function Valoraciones() {
     </div>
   );
 
+  if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />;
 
-  const { puede } = usePlan();
-if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />;
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
@@ -106,7 +109,6 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
         {/* Stats + distribución */}
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:16 }}>
 
-          {/* Media y KPIs */}
           <div style={{ background:'#063D2A', borderRadius:14, padding:'24px 20px', display:'flex', flexDirection:'column', gap:16 }}>
             <div style={{ display:'flex', alignItems:'center', gap:16 }}>
               <div>
@@ -136,14 +138,13 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
             </div>
           </div>
 
-          {/* Info + tips */}
           <div style={{ background:'#F4FAF7', border:'1px solid #EAF5EF', borderRadius:14, padding:'20px' }}>
             <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:12 }}>Cómo conseguir más valoraciones</div>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {[
-                { emoji:'📱', texto:'Activa WhatsApp automático en Ajustes para pedir valoración tras cada cita' },
-                { emoji:'🔗', texto:'Comparte tu página pública — los clientes pueden valorar tras reservar' },
-                { emoji:'⭐', texto:'Responde a las valoraciones — aumenta la confianza de nuevos clientes' },
+                { emoji:'💬', texto:'Usa el botón WhatsApp del TPV tras cada cobro para pedir reseña al instante' },
+                { emoji:'🔗', texto:'Copia el link de reseña desde Reservas y envíalo por cualquier canal' },
+                { emoji:'⭐', texto:'Responde a todas las valoraciones — genera confianza en nuevos clientes' },
                 { emoji:'🎯', texto:'Una media de 4.5+ estrellas incrementa las reservas un 30%' },
               ].map((t, i) => (
                 <div key={i} style={{ display:'flex', gap:10, padding:'8px 10px', background:'#fff', borderRadius:8, border:'1px solid #EAF5EF' }}>
@@ -162,7 +163,7 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
             { k:'5',             label:'★★★★★' },
             { k:'4',             label:'★★★★' },
             { k:'bajas',         label:'≤ 3 ★' },
-            { k:'sin_respuesta', label:`Sin responder ${sinRespuesta > 0 ? `(${sinRespuesta})` : ''}` },
+            { k:'sin_respuesta', label:`Sin responder${sinRespuesta > 0 ? ` (${sinRespuesta})` : ''}` },
           ].map(f => (
             <button key={f.k} onClick={() => setFiltro(f.k)} style={{
               padding:'7px 14px', fontSize:12.5, fontWeight:500,
@@ -175,15 +176,15 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
         </div>
 
         {/* Lista */}
-        {valoraciones.length > 0 ? (
+        {resenas.length > 0 ? (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {filtradas.map(v => (
-              <div key={v.id} style={{ background:'#fff', border:`1px solid ${v.estrellas >= 4 ? '#EAF5EF' : v.estrellas === 3 ? '#F5E4A0' : '#FECACA'}`, borderRadius:12, padding: isMobile ? 14 : 18 }}>
+              <div key={v.id} style={{ background:'#fff', border:`1px solid ${v.puntuacion >= 4 ? '#EAF5EF' : v.puntuacion === 3 ? '#F5E4A0' : '#FECACA'}`, borderRadius:12, padding: isMobile ? 14 : 18 }}>
 
                 {/* Cabecera */}
                 <div style={{ display:'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent:'space-between', marginBottom:10, flexDirection: isMobile ? 'column' : 'row', gap:8 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{ width:40, height:40, borderRadius:'50%', background: v.estrellas >= 4 ? '#E8F7F2' : '#FFF8E7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:700, color: v.estrellas >= 4 ? '#0A9E6E' : '#F59E0B', flexShrink:0 }}>
+                    <div style={{ width:40, height:40, borderRadius:'50%', background: v.puntuacion >= 4 ? '#E8F7F2' : '#FFF8E7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:700, color: v.puntuacion >= 4 ? '#0A9E6E' : '#F59E0B', flexShrink:0 }}>
                       {(v.clientes?.nombre || '?')[0].toUpperCase()}
                     </div>
                     <div>
@@ -195,7 +196,7 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
                     </div>
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', alignItems: isMobile ? 'flex-start' : 'flex-end', gap:4 }}>
-                    <Estrellas valor={v.estrellas||0} size={16}/>
+                    <Estrellas valor={v.puntuacion || 0} size={16}/>
                     <div style={{ fontSize:11, color:'#A8C4B8' }}>
                       {new Date(v.created_at).toLocaleDateString('es-ES')}
                     </div>
@@ -209,38 +210,25 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
                   </div>
                 )}
 
-                {/* Sub-valoraciones */}
-                {!isMobile && (v.resultado || v.trato || v.limpieza || v.puntualidad) && (
-                  <div style={{ display:'flex', gap:16, marginBottom:10, flexWrap:'wrap' }}>
-                    {[
-                      { label:'Resultado',   val: v.resultado   },
-                      { label:'Trato',       val: v.trato       },
-                      { label:'Limpieza',    val: v.limpieza    },
-                      { label:'Puntualidad', val: v.puntualidad },
-                    ].filter(d => d.val).map(d => (
-                      <div key={d.label} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                        <span style={{ fontSize:11, color:'#6B9080' }}>{d.label}</span>
-                        <Estrellas valor={d.val} max={5} size={12}/>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 {/* Respuesta del negocio */}
-                {v.respuesta_negocio && (
+                {v.respuesta && (
                   <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:8, padding:'10px 14px', marginBottom:8 }}>
                     <div style={{ fontSize:11, fontWeight:700, color:'#063D2A', marginBottom:4 }}>
                       Tu respuesta · {v.respuesta_fecha ? new Date(v.respuesta_fecha).toLocaleDateString('es-ES') : ''}
                     </div>
-                    <div style={{ fontSize:13, color:'#0B1E16', lineHeight:1.5 }}>{v.respuesta_negocio}</div>
+                    <div style={{ fontSize:13, color:'#0B1E16', lineHeight:1.5 }}>{v.respuesta}</div>
+                    <button onClick={() => { setRespondiendo(v.id); setRespuesta(v.respuesta); }}
+                      style={{ marginTop:6, padding:'4px 10px', background:'transparent', color:'#6B9080', border:'1px solid #D6EDE5', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                      Editar respuesta
+                    </button>
                   </div>
                 )}
 
-                {/* Botón responder */}
-                {v.comentario && !v.respuesta_negocio && (
+                {/* Botón responder / formulario */}
+                {v.comentario && (
                   respondiendo === v.id ? (
                     <div style={{ marginTop:8 }}>
-                      <textarea value={respuesta} onChange={e=>setRespuesta(e.target.value)}
+                      <textarea value={respuesta} onChange={e => setRespuesta(e.target.value)}
                         placeholder="Escribe tu respuesta al cliente..."
                         style={{ width:'100%', padding:'10px 12px', border:'1.5px solid #0A9E6E', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', outline:'none', minHeight:80, resize:'vertical', marginBottom:8 }}/>
                       <div style={{ display:'flex', gap:6 }}>
@@ -255,10 +243,12 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => { setRespondiendo(v.id); setRespuesta(''); }}
-                      style={{ marginTop:4, padding:'6px 12px', background:'transparent', color:'#0A9E6E', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                      Responder →
-                    </button>
+                    !v.respuesta && (
+                      <button onClick={() => { setRespondiendo(v.id); setRespuesta(''); }}
+                        style={{ marginTop:4, padding:'6px 12px', background:'transparent', color:'#0A9E6E', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                        Responder →
+                      </button>
+                    )
                   )
                 )}
               </div>
@@ -273,10 +263,9 @@ if (!puede('resenas')) return <PlanGate feature="resenas" planRequerido="pro" />
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'60px 40px', textAlign:'center' }}>
             <div style={{ fontSize:40, marginBottom:12 }}>⭐</div>
             <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>Sin valoraciones aún</div>
-            <div style={{ fontSize:13, color:'#6B9080' }}>Activa los recordatorios automáticos en Ajustes para pedir valoraciones</div>
+            <div style={{ fontSize:13, color:'#6B9080' }}>Usa el botón WhatsApp del TPV tras cada cobro para pedir reseñas</div>
           </div>
         )}
-
       </div>
     </div>
   );
