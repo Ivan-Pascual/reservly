@@ -34,6 +34,7 @@ import HistorialStock from './pages/stock/HistorialStock';
 import Demo from './pages/demo/Demo';
 import Fidelizacion from './pages/fidelizacion/Fidelizacion';
 import QRImprimible from './pages/qr/QRImprimible';
+import Precios from './pages/landing/Precios';
 
 const TITULOS = {
   '/dashboard':    'Inicio',
@@ -192,6 +193,8 @@ export default function App() {
                   <Route path="/pago/exito"          element={<PagoExito />} />
                   <Route path="/pago/cancelado"      element={<PagoCancelado />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
+                  <Route path="/precios" element={<Precios />} />
+
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>
               </Layout>

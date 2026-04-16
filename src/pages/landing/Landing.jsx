@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const FEATURES = [
@@ -129,6 +129,7 @@ export default function Landing() {
           <a href="#como-funciona" className="nav-link">Cómo funciona</a>
           <a href="#features" className="nav-link">Funciones</a>
           <a href="#precios" className="nav-link">Precios</a>
+          <a href="/precios" className="nav-link">Comparativa</a>
           <div style={{ display:'flex', gap:8, marginLeft:8 }}>
             <button onClick={() => navigate('/login')} className="btn-secondary" style={{ padding:'8px 18px', fontSize:13 }}>Entrar</button>
             <button onClick={() => navigate('/login')} className="btn-primary" style={{ padding:'8px 18px', fontSize:13 }}>Empezar gratis</button>
@@ -147,7 +148,7 @@ export default function Landing() {
       {/* Mobile menu */}
       {menuAbierto && (
         <div style={{ position:'fixed', top:68, left:0, right:0, zIndex:99, background:'#fff', borderBottom:'1px solid #EAF5EF', padding:'16px 24px', display:'flex', flexDirection:'column', gap:12, boxShadow:'0 8px 24px rgba(0,0,0,0.08)' }}>
-          {[['#como-funciona','Cómo funciona'],['#features','Funciones'],['#precios','Precios']].map(([href, label]) => (
+          {[['#como-funciona','Cómo funciona'],['#features','Funciones'],['#precios','Precios'],['/precios','Comparativa vs Booksy']].map(([href, label]) => (
             <a key={href} href={href} onClick={() => setMenuAbierto(false)}
               style={{ fontSize:15, fontWeight:600, color:'#0B1E16', textDecoration:'none', padding:'8px 0', borderBottom:'1px solid #EAF5EF' }}>
               {label}
@@ -354,7 +355,12 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <div style={{ textAlign:'center', marginTop:20, fontSize:13, color:'#A8C4B8' }}>
+          <div style={{ textAlign:'center', marginTop:16 }}>
+            <a href="/precios" style={{ fontSize:13, color:'#0A9E6E', fontWeight:600, textDecoration:'none' }}>
+              Ver comparativa completa vs Booksy y Fresha →
+            </a>
+          </div>
+          <div style={{ textAlign:'center', marginTop:10, fontSize:13, color:'#A8C4B8' }}>
             Sin permanencia · Cancela cuando quieras · Pago seguro con Stripe
           </div>
         </div>
@@ -396,7 +402,12 @@ export default function Landing() {
             <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginLeft:6 }}>© 2026</span>
           </div>
           <div style={{ display:'flex', gap:24, flexWrap:'wrap' }}>
-            {[['Privacidad','/privacidad'],['Términos','/terminos'],['hola@getreservly.com','mailto:hola@getreservly.com']].map(([label, href]) => (
+            {[
+              ['Privacidad','/privacidad'],
+              ['Términos','/terminos'],
+              ['Precios','/precios'],
+              ['hola@getreservly.com','mailto:hola@getreservly.com'],
+            ].map(([label, href]) => (
               <a key={label} href={href}
                 style={{ fontSize:13, color:'rgba(255,255,255,0.35)', textDecoration:'none' }}
                 onMouseEnter={e=>e.target.style.color='rgba(255,255,255,0.8)'}
