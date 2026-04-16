@@ -14,12 +14,13 @@ export default function Empleados() {
   const [editando, setEditando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmEliminar, setConfirmEliminar] = useState(null);
   const [form, setForm] = useState(formVacio);
 
   useEffect(() => {
     if (!negocio) return;
     fetchEmpleados();
-  }, [negocio]);
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEmpleados = async () => {
     const { data } = await supabase
@@ -40,6 +41,7 @@ export default function Empleados() {
       comision_valor: e.comision_valor || 0,
     });
     setShowForm(true);
+    setConfirmEliminar(null);
   };
 
   const cerrarForm = () => {
@@ -70,8 +72,8 @@ export default function Empleados() {
   };
 
   const eliminarEmpleado = async (id) => {
-    if (!window.confirm('¿Eliminar este empleado? Sus reservas existentes no se verán afectadas.')) return;
     await supabase.from('empleados').update({ activo: false }).eq('id', id);
+    setConfirmEliminar(null);
     fetchEmpleados();
   };
 
@@ -86,6 +88,7 @@ export default function Empleados() {
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
+      {/* Topbar */}
       <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:16 }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Empleados</div>
         <div style={{ marginLeft:'auto' }}>
@@ -141,12 +144,13 @@ export default function Empleados() {
               </div>
               <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap:10 }}>
                 <div>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Color</div>
-                  <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Color en agenda</div>
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', paddingTop:4 }}>
                     {COLORES.map(c => (
                       <div key={c} onClick={() => setForm({...form, color:c})}
-                        style={{ width:26, height:26, borderRadius:'50%', background:c, cursor:'pointer',
-                          border: form.color===c ? '3px solid #0B1E16' : '3px solid transparent' }}/>
+                        style={{ width:28, height:28, borderRadius:'50%', background:c, cursor:'pointer',
+                          border: form.color===c ? '3px solid #0B1E16' : '3px solid transparent',
+                          transition:'border 0.15s' }}/>
                     ))}
                   </div>
                 </div>
@@ -186,43 +190,69 @@ export default function Empleados() {
 
         {/* Cards empleados */}
         {empleados.length > 0 ? (
-          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap:14 }}>
             {empleados.map(e => (
-              <div key={e.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-                <div style={{ background: e.color + '20', padding:'16px 16px', display:'flex', alignItems:'center', gap:12, borderBottom:'1px solid #EAF5EF' }}>
-                  <div style={{ width:44, height:44, borderRadius:'50%', background:e.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'#fff', flexShrink:0 }}>
+              <div key={e.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:16, overflow:'hidden', transition:'box-shadow 0.15s' }}
+                onMouseEnter={ev=>ev.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.06)'}
+                onMouseLeave={ev=>ev.currentTarget.style.boxShadow='none'}
+              >
+                {/* Header card */}
+                <div style={{ background:`linear-gradient(135deg, ${e.color}15 0%, ${e.color}08 100%)`, padding:'20px 18px', display:'flex', alignItems:'center', gap:14, borderBottom:'1px solid #EAF5EF' }}>
+                  <div style={{ width:48, height:48, borderRadius:14, background:e.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:700, color:'#fff', flexShrink:0, boxShadow:`0 4px 12px ${e.color}40` }}>
                     {e.nombre[0].toUpperCase()}
                   </div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{e.nombre}</div>
-                    <div style={{ fontSize:11.5, color:'#6B9080', marginTop:2 }}>{e.email || 'Sin email'}</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16', marginBottom:2 }}>{e.nombre}</div>
+                    <div style={{ fontSize:12, color:'#6B9080', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {e.email || e.telefono || 'Sin contacto'}
+                    </div>
                   </div>
                   <button onClick={() => abrirEdicion(e)}
-                    style={{ background:'#E8F7F2', border:'none', color:'#0A9E6E', padding:'5px 10px', borderRadius:6, fontSize:11.5, fontWeight:600, cursor:'pointer' }}>
+                    style={{ background:'#fff', border:'1px solid #D6EDE5', color:'#6B9080', padding:'5px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', flexShrink:0 }}>
                     Editar
                   </button>
                 </div>
-                <div style={{ padding:'12px 16px' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, marginBottom: e.telefono ? 8 : 0 }}>
+
+                {/* Info */}
+                <div style={{ padding:'14px 18px', display:'flex', flexDirection:'column', gap:8 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:13 }}>
                     <span style={{ color:'#6B9080' }}>Comisión</span>
-                    <span style={{ fontWeight:600, color: e.tipo_comision==='ninguna' ? '#A8C4B8' : '#0A9E6E' }}>
+                    <span style={{ fontWeight:600, color: e.tipo_comision==='ninguna' ? '#A8C4B8' : '#0A9E6E',
+                      background: e.tipo_comision==='ninguna' ? '#F4FAF7' : '#E8F7F2',
+                      padding:'2px 10px', borderRadius:20, fontSize:12 }}>
                       {e.tipo_comision === 'ninguna' ? 'Sin comisión' :
                        e.tipo_comision === 'porcentaje' ? `${e.comision_valor}%` :
-                       `${e.comision_valor} EUR/cita`}
+                       `${e.comision_valor}€/cita`}
                     </span>
                   </div>
                   {e.telefono && (
                     <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
                       <span style={{ color:'#6B9080' }}>Teléfono</span>
-                      <span style={{ fontFamily:'DM Mono, monospace', color:'#0B1E16' }}>{e.telefono}</span>
+                      <span style={{ fontFamily:'DM Mono, monospace', color:'#0B1E16', fontSize:12 }}>{e.telefono}</span>
                     </div>
                   )}
                 </div>
-                <div style={{ padding:'10px 16px', borderTop:'1px solid #EAF5EF' }}>
-                  <button onClick={() => eliminarEmpleado(e.id)}
-                    style={{ width:'100%', background:'transparent', border:'1px solid #FECACA', color:'#EF4444', padding:'6px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                    Eliminar empleado
-                  </button>
+
+                {/* Footer — eliminar con confirmación inline */}
+                <div style={{ padding:'10px 18px', borderTop:'1px solid #EAF5EF' }}>
+                  {confirmEliminar === e.id ? (
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:12, color:'#6B9080', flex:1 }}>¿Confirmar eliminación?</span>
+                      <button onClick={() => eliminarEmpleado(e.id)}
+                        style={{ padding:'5px 12px', background:'#EF4444', color:'#fff', border:'none', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                        Sí, eliminar
+                      </button>
+                      <button onClick={() => setConfirmEliminar(null)}
+                        style={{ padding:'5px 10px', background:'transparent', color:'#6B9080', border:'1px solid #D6EDE5', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmEliminar(e.id)}
+                      style={{ background:'transparent', border:'none', color:'#A8C4B8', fontSize:12, fontWeight:500, cursor:'pointer', padding:0 }}>
+                      Dar de baja
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -231,14 +261,13 @@ export default function Empleados() {
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'60px 40px', textAlign:'center' }}>
             <div style={{ fontSize:40, marginBottom:12 }}>👥</div>
             <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>Sin empleados aún</div>
-            <div style={{ fontSize:13, color:'#6B9080', marginBottom:20 }}>Añade tu primer empleado para empezar a gestionar reservas</div>
+            <div style={{ fontSize:13, color:'#6B9080', marginBottom:20 }}>Añade tu primer empleado para gestionar reservas por persona</div>
             <button onClick={() => setShowForm(true)}
               style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'10px 24px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
               + Añadir empleado
             </button>
           </div>
         )}
-
       </div>
     </div>
   );
