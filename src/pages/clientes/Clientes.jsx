@@ -4,6 +4,7 @@ import { useNegocio } from '../../hooks/useNegocio';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { exportarExcel, exportarPDF } from '../../services/exportar';
+import { usePlan } from '../../hooks/usePlan';
 
 const TAG_STYLES = {
   vip:      { bg:'#F5F3FF', color:'#8B5CF6', label:'⭐ VIP'  },
@@ -37,6 +38,7 @@ export default function Clientes() {
   const { negocio } = useNegocio();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { puede } = usePlan();
   const [clientes, setClientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroTag, setFiltroTag] = useState('todos');
@@ -115,12 +117,18 @@ export default function Clientes() {
         <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
           {!isMobile && (
             <>
-              <button onClick={() => exportarExcel.clientes(clientes, negocio?.nombre)}
-                style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+              <button onClick={() => {
+                if (!puede('exportar')) { navigate('/ajustes'); return; }
+                exportarExcel.clientes(clientes, negocio?.nombre);
+              }} style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color: puede('exportar') ? '#6B9080' : '#A8C4B8', cursor:'pointer', position:'relative' }}>
+                {!puede('exportar') && <span style={{ position:'absolute', top:-5, right:-5, fontSize:10 }}>🔒</span>}
                 📊 Excel
               </button>
-              <button onClick={() => exportarPDF.clientes(clientes, negocio?.nombre)}
-                style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+              <button onClick={() => {
+                if (!puede('exportar')) { navigate('/ajustes'); return; }
+                exportarPDF.clientes(clientes, negocio?.nombre);
+              }} style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color: puede('exportar') ? '#6B9080' : '#A8C4B8', cursor:'pointer', position:'relative' }}>
+                {!puede('exportar') && <span style={{ position:'absolute', top:-5, right:-5, fontSize:10 }}>🔒</span>}
                 📄 PDF
               </button>
             </>
@@ -248,7 +256,7 @@ export default function Clientes() {
             {/* Sexo */}
             <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
               {[
-                { k:'todos',  label:'Todos' },
+                { k:'todos',  label:'Todos'  },
                 { k:'mujer',  label:'Mujer'  },
                 { k:'hombre', label:'Hombre' },
                 { k:'otro',   label:'Otro'   },
