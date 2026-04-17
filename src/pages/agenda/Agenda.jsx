@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNegocio } from '../../hooks/useNegocio';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -18,13 +19,48 @@ const ESTADO_COLORS = {
   cancelada:  '#EF4444',
 };
 
+function ReservaTooltip({ r, onClose }) {
+  return (
+    <div onClick={e => e.stopPropagation()}
+      style={{ position:'absolute', zIndex:50, top:'110%', left:0, minWidth:200, background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding:14 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:4 }}>{r.clientes?.nombre || 'Cliente'}</div>
+      <div style={{ fontSize:12, color:'#6B9080', marginBottom:2 }}>{r.servicios?.nombre || '—'}</div>
+      <div style={{ fontSize:11, fontFamily:'DM Mono, monospace', color:'#6B9080', marginBottom:8 }}>
+        {r.hora_inicio?.slice(0,5)} – {r.hora_fin?.slice(0,5)}
+      </div>
+      {r.empleados && (
+        <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:10 }}>
+          <div style={{ width:6, height:6, borderRadius:'50%', background:r.empleados.color||'#ccc' }}/>
+          <span style={{ fontSize:11, color:'#6B9080' }}>{r.empleados.nombre}</span>
+        </div>
+      )}
+      <div style={{ display:'flex', gap:6 }}>
+        {r.estado === 'confirmada' && (
+          <a href={`/tpv/${r.id}`}
+            style={{ flex:1, padding:'6px', fontSize:11, fontWeight:700, background:'#063D2A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', textDecoration:'none', textAlign:'center' }}>
+            Cobrar →
+          </a>
+        )}
+        <a href={`/reservas`}
+          style={{ flex:1, padding:'6px', fontSize:11, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:6, cursor:'pointer', textDecoration:'none', textAlign:'center' }}>
+          Ver detalle
+        </a>
+      </div>
+      <button onClick={onClose}
+        style={{ position:'absolute', top:8, right:10, background:'transparent', border:'none', color:'#A8C4B8', fontSize:14, cursor:'pointer' }}>✕</button>
+    </div>
+  );
+}
+
 export default function Agenda() {
   const { negocio } = useNegocio();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [semanaOffset, setSemanaOffset] = useState(0);
   const [diaSeleccionado, setDiaSeleccionado] = useState(0);
+  const [tooltipId, setTooltipId] = useState(null);
   const horaActualRef = useRef(null);
 
   const getLunes = (offset = 0) => {
@@ -52,7 +88,6 @@ export default function Agenda() {
     fetchData();
   }, [negocio, semanaOffset]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scroll automático a la hora actual
   useEffect(() => {
     if (!isMobile && !loading && semanaOffset === 0 && horaActualRef.current) {
       setTimeout(() => {
@@ -60,6 +95,13 @@ export default function Agenda() {
       }, 300);
     }
   }, [loading, isMobile, semanaOffset]);
+
+  // Cerrar tooltip al clicar fuera
+  useEffect(() => {
+    const handler = () => setTooltipId(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -76,7 +118,6 @@ export default function Agenda() {
   };
 
   const getReservasDia  = (fecha) => reservas.filter(r => r.fecha === fechaStr(fecha));
-
   const getReservasHora = (fecha, hora) =>
     getReservasDia(fecha).filter(r => {
       const ini = r.hora_inicio?.slice(0,5);
@@ -90,12 +131,11 @@ export default function Agenda() {
   };
 
   const esHoy = (fecha) => fechaStr(fecha) === fechaStr(new Date());
-
   const esHoraActual = (hora) => {
-    const ahora     = new Date();
-    const ahoraMin  = ahora.getHours() * 60 + ahora.getMinutes();
-    const [hH, hM]  = hora.split(':').map(Number);
-    const horaMin   = hH * 60 + hM;
+    const ahora    = new Date();
+    const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
+    const [hH, hM] = hora.split(':').map(Number);
+    const horaMin  = hH * 60 + hM;
     return horaMin <= ahoraMin && ahoraMin < horaMin + 30;
   };
 
@@ -134,8 +174,12 @@ export default function Agenda() {
           style={{ padding:'4px 10px', border:'1px solid #D6EDE5', borderRadius:8, background: semanaOffset===0 ? '#E8F7F2' : 'transparent', color: semanaOffset===0 ? '#0A9E6E' : '#6B9080', fontSize:12, fontWeight:600, cursor:'pointer' }}>
           Hoy
         </button>
+        <button onClick={() => navigate('/reservas')}
+          style={{ marginLeft:'auto', padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background:'transparent', color:'#6B9080', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+          + Nueva reserva
+        </button>
         {!isMobile && (
-          <div style={{ marginLeft:'auto', display:'flex', gap:12 }}>
+          <div style={{ display:'flex', gap:12 }}>
             {[
               { label:'Confirmada', color:'#0A9E6E' },
               { label:'Pendiente',  color:'#F59E0B' },
@@ -169,7 +213,7 @@ export default function Agenda() {
           </div>
           <div style={{ flex:1, overflowY:'auto', padding:16 }}>
             {(() => {
-              const diaActual  = diasSemana[diaSeleccionado];
+              const diaActual   = diasSemana[diaSeleccionado];
               const reservasDia = getReservasDia(diaActual).sort((a,b) =>
                 (a.hora_inicio||'').localeCompare(b.hora_inicio||'')
               );
@@ -182,11 +226,25 @@ export default function Agenda() {
               return (
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                   {reservasDia.map(r => (
-                    <div key={r.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:14, borderLeft:`4px solid ${ESTADO_COLORS[r.estado]||'#0A9E6E'}` }}>
+                    <div key={r.id}
+                      onClick={() => r.estado === 'confirmada' ? navigate(`/tpv/${r.id}`) : navigate('/reservas')}
+                      style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:14,
+                        borderLeft:`4px solid ${ESTADO_COLORS[r.estado]||'#0A9E6E'}`,
+                        cursor:'pointer', transition:'all 0.15s' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.background='#F4FAF7'; e.currentTarget.style.transform='translateY(-1px)'; }}
+                      onMouseLeave={e=>{ e.currentTarget.style.background='#fff'; e.currentTarget.style.transform='none'; }}
+                    >
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
                         <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{r.clientes?.nombre || 'Cliente'}</div>
-                        <div style={{ fontSize:12, fontFamily:'DM Mono, monospace', color:'#6B9080' }}>
-                          {r.hora_inicio?.slice(0,5)} – {r.hora_fin?.slice(0,5)}
+                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <div style={{ fontSize:12, fontFamily:'DM Mono, monospace', color:'#6B9080' }}>
+                            {r.hora_inicio?.slice(0,5)} – {r.hora_fin?.slice(0,5)}
+                          </div>
+                          {r.estado === 'confirmada' && (
+                            <span style={{ fontSize:10, fontWeight:700, background:'#063D2A', color:'#fff', padding:'2px 6px', borderRadius:6 }}>
+                              Cobrar →
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div style={{ fontSize:12.5, color:'#6B9080', marginBottom:4 }}>{r.servicios?.nombre || '—'}</div>
@@ -255,15 +313,24 @@ export default function Agenda() {
                           const esInicioSlot = r.hora_inicio?.slice(0,5) === hora;
                           if (!esInicioSlot) return null;
                           const slots = Math.max(1, duracion / 30);
+                          const abierto = tooltipId === r.id;
                           return (
-                            <div key={r.id} style={{
-                              background: (ESTADO_COLORS[r.estado] || '#0A9E6E') + '20',
-                              borderLeft: `3px solid ${ESTADO_COLORS[r.estado] || '#0A9E6E'}`,
-                              borderRadius:'0 6px 6px 0',
-                              padding:'4px 6px',
-                              minHeight: slots * 52 - 8,
-                              overflow:'hidden',
-                            }}>
+                            <div key={r.id}
+                              onClick={e => { e.stopPropagation(); setTooltipId(abierto ? null : r.id); }}
+                              style={{
+                                position:'relative',
+                                background: (ESTADO_COLORS[r.estado] || '#0A9E6E') + '20',
+                                borderLeft: `3px solid ${ESTADO_COLORS[r.estado] || '#0A9E6E'}`,
+                                borderRadius:'0 6px 6px 0',
+                                padding:'4px 6px',
+                                minHeight: slots * 52 - 8,
+                                overflow: abierto ? 'visible' : 'hidden',
+                                cursor:'pointer',
+                                transition:'filter 0.15s',
+                              }}
+                              onMouseEnter={e=>e.currentTarget.style.filter='brightness(0.95)'}
+                              onMouseLeave={e=>e.currentTarget.style.filter='none'}
+                            >
                               <div style={{ fontSize:11.5, fontWeight:700, color:'#0B1E16', lineHeight:1.3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                                 {r.clientes?.nombre || 'Cliente'}
                               </div>
@@ -276,6 +343,7 @@ export default function Agenda() {
                                   <span style={{ fontSize:10, color:'#6B9080', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.empleados.nombre}</span>
                                 </div>
                               )}
+                              {abierto && <ReservaTooltip r={r} onClose={() => setTooltipId(null)}/>}
                             </div>
                           );
                         })}
