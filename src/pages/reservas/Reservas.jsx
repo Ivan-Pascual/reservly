@@ -4,6 +4,7 @@ import { supabase } from '../../supabase';
 import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { exportarExcel, exportarPDF } from '../../services/exportar';
+import { usePlan } from '../../hooks/usePlan';
 
 const ESTADO_STYLES = {
   confirmada: { bg:'#E8F7F2', color:'#063D2A', label:'Confirmada' },
@@ -25,6 +26,7 @@ export default function Reservas() {
   const { negocio } = useNegocio();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { puede } = usePlan();
   const [reservas, setReservas] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [empleados, setEmpleados] = useState([]);
@@ -40,6 +42,7 @@ export default function Reservas() {
   const [modoCliente, setModoCliente] = useState('existente');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(formVacio);
+  const [formError, setFormError] = useState(''); // BUG 3
 
   useEffect(() => {
     if (!negocio) return;
@@ -51,7 +54,7 @@ export default function Reservas() {
       supabase.from('reservas').select(`
         *, clientes(nombre, telefono), empleados(nombre, color), servicios(nombre, duracion, precio)
       `).eq('negocio_id', negocio.id).order('fecha', { ascending:false }).order('hora_inicio'),
-      supabase.from('clientes').select('id, nombre').eq('negocio_id', negocio.id),
+      supabase.from('clientes').select('id, nombre, telefono').eq('negocio_id', negocio.id),
       supabase.from('empleados').select('id, nombre, color').eq('negocio_id', negocio.id).eq('activo', true),
       supabase.from('servicios').select('id, nombre, duracion, precio').eq('negocio_id', negocio.id).eq('activo', true),
     ]);
@@ -64,6 +67,7 @@ export default function Reservas() {
 
   const abrirEdicion = (r) => {
     setEditando(r.id);
+    setFormError('');
     setForm({
       cliente_id:  r.cliente_id  || '',
       empleado_id: r.empleado_id || '',
@@ -81,22 +85,37 @@ export default function Reservas() {
     setShowForm(false);
     setEditando(null);
     setForm(formVacio);
+    setFormError('');
     setModoCliente('existente');
     setClienteNuevo({ nombre:'', telefono:'', email:'' });
   };
 
   const guardarReserva = async () => {
+    setFormError('');
+
+    // BUG 3 FIX — validaciones completas con mensaje visible
     if (modoCliente === 'existente' && !form.cliente_id) {
-      alert('Selecciona un cliente o crea uno nuevo.');
+      setFormError('Selecciona un cliente o crea uno nuevo.');
       return;
     }
     if (modoCliente === 'nuevo' && !clienteNuevo.nombre.trim()) {
-      alert('El nombre del cliente es obligatorio.');
+      setFormError('El nombre del cliente es obligatorio.');
       return;
     }
-    if (!form.fecha || !form.hora_inicio) return;
-    setSaving(true);
+    if (!form.fecha) {
+      setFormError('La fecha es obligatoria.');
+      return;
+    }
+    if (!form.hora_inicio || !form.hora_fin) {
+      setFormError('La hora de inicio y fin son obligatorias.');
+      return;
+    }
+    if (form.hora_inicio >= form.hora_fin) {
+      setFormError('La hora de fin debe ser posterior a la de inicio.');
+      return;
+    }
 
+    setSaving(true);
     let clienteId = form.cliente_id;
 
     if (modoCliente === 'nuevo') {
@@ -109,7 +128,7 @@ export default function Reservas() {
           tag:        'nuevo',
         }).select().single();
       if (error || !nuevoCliente) {
-        alert('Error al crear el cliente.');
+        setFormError('Error al crear el cliente. Inténtalo de nuevo.');
         setSaving(false);
         return;
       }
@@ -131,68 +150,42 @@ export default function Reservas() {
     if (editando) {
       const reservaActual = reservas.find(r => r.id === editando);
       if (reservaActual?.estado === 'completada') {
-        alert('No se puede editar una reserva ya completada.');
+        setFormError('No se puede editar una reserva ya completada.');
         setSaving(false);
         return;
       }
 
       await supabase.from('reservas').update(payload).eq('id', editando);
 
-      // Si se marca como completada, registrar en TPV automáticamente
       if (form.estado === 'completada' && reservaActual?.estado !== 'completada') {
         const servicio = servicios.find(s => s.id === form.servicio_id);
         const precio = servicio?.precio || 0;
-
-        const { data: tpvExistente } = await supabase
-          .from('tpv').select('id').eq('reserva_id', editando).single();
-
+        const { data: tpvExistente } = await supabase.from('tpv').select('id').eq('reserva_id', editando).single();
         if (!tpvExistente) {
           const { data: tpv } = await supabase.from('tpv').insert({
-            reserva_id:  editando,
-            negocio_id:  negocio.id,
-            metodo_pago: 'efectivo',
-            importe:     precio,
-            propina:     0,
+            reserva_id: editando, negocio_id: negocio.id,
+            metodo_pago: 'efectivo', importe: precio, propina: 0,
           }).select().single();
-
-          if (tpv) {
+          if (tpv && servicio) {
             await supabase.from('reservas').update({ precio_final: precio }).eq('id', editando);
-            if (servicio) {
-              await supabase.from('tpv_productos').insert({
-                tpv_id: tpv.id,
-                nombre: servicio.nombre,
-                precio: precio,
-              });
-            }
+            await supabase.from('tpv_productos').insert({ tpv_id: tpv.id, nombre: servicio.nombre, precio });
           }
         }
       }
     } else {
       const { data: nuevaReserva } = await supabase
-        .from('reservas').insert({ ...payload, negocio_id: negocio.id })
-        .select().single();
+        .from('reservas').insert({ ...payload, negocio_id: negocio.id }).select().single();
 
       if (form.estado === 'completada' && nuevaReserva) {
         const servicio = servicios.find(s => s.id === form.servicio_id);
         const precio = servicio?.precio || 0;
-
         const { data: tpv } = await supabase.from('tpv').insert({
-          reserva_id:  nuevaReserva.id,
-          negocio_id:  negocio.id,
-          metodo_pago: 'efectivo',
-          importe:     precio,
-          propina:     0,
+          reserva_id: nuevaReserva.id, negocio_id: negocio.id,
+          metodo_pago: 'efectivo', importe: precio, propina: 0,
         }).select().single();
-
-        if (tpv) {
+        if (tpv && servicio) {
           await supabase.from('reservas').update({ precio_final: precio }).eq('id', nuevaReserva.id);
-          if (servicio) {
-            await supabase.from('tpv_productos').insert({
-              tpv_id: tpv.id,
-              nombre: servicio.nombre,
-              precio: precio,
-            });
-          }
+          await supabase.from('tpv_productos').insert({ tpv_id: tpv.id, nombre: servicio.nombre, precio });
         }
       }
     }
@@ -202,10 +195,19 @@ export default function Reservas() {
     setSaving(false);
   };
 
+  // BUG 2 FIX — reactivar en vez de solo cancelar
+  const cambiarEstado = async (id, nuevoEstado) => {
+    await supabase.from('reservas').update({ estado: nuevoEstado }).eq('id', id);
+    fetchTodo();
+  };
+
   const eliminarReserva = async (id) => {
     if (!window.confirm('¿Cancelar esta reserva?')) return;
-    await supabase.from('reservas').update({ estado: 'cancelada' }).eq('id', id);
-    fetchTodo();
+    await cambiarEstado(id, 'cancelada');
+  };
+
+  const reactivarReserva = async (id) => {
+    await cambiarEstado(id, 'pendiente');
   };
 
   const copiarLinkResena = (r) => {
@@ -214,8 +216,12 @@ export default function Reservas() {
     alert('Link de reseña copiado.');
   };
 
+  // BUG 1 FIX — usar telefono del cliente correctamente
   const linkWA = (r) => {
-    const tel = r.clientes?.telefono?.replace(/\s/g,'').replace('+','') || '';
+    const telefono = r.clientes?.telefono;
+    if (!telefono) return null;
+    const tel = telefono.replace(/\s/g,'').replace('+','');
+    if (!tel || !/^\d+$/.test(tel)) return null;
     const link = `https://getreservly.com/resena/${negocio?.slug}/${r.id}`;
     const msg = encodeURIComponent(`Hola ${r.clientes?.nombre || ''}! Gracias por tu visita 😊 ¿Nos dejas una reseña? ${link}`);
     return `https://wa.me/${tel}?text=${msg}`;
@@ -247,12 +253,18 @@ export default function Reservas() {
         <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
           {!isMobile && (
             <>
-              <button onClick={() => exportarExcel.reservas(reservas, negocio?.nombre)}
-                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+              <button onClick={() => {
+                if (!puede('exportar')) { navigate('/ajustes'); return; }
+                exportarExcel.reservas(reservas, negocio?.nombre);
+              }} style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color: puede('exportar') ? '#6B9080' : '#A8C4B8', cursor:'pointer', position:'relative' }}>
+                {!puede('exportar') && <span style={{ position:'absolute', top:-5, right:-5, fontSize:10 }}>🔒</span>}
                 📊 Excel
               </button>
-              <button onClick={() => exportarPDF.reservas(reservas, negocio?.nombre)}
-                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+              <button onClick={() => {
+                if (!puede('exportar')) { navigate('/ajustes'); return; }
+                exportarPDF.reservas(reservas, negocio?.nombre);
+              }} style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color: puede('exportar') ? '#6B9080' : '#A8C4B8', cursor:'pointer', position:'relative' }}>
+                {!puede('exportar') && <span style={{ position:'absolute', top:-5, right:-5, fontSize:10 }}>🔒</span>}
                 📄 PDF
               </button>
             </>
@@ -371,7 +383,14 @@ export default function Reservas() {
 
               {form.estado === 'completada' && (
                 <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#063D2A' }}>
-                  ✓ Al guardar se registrará automáticamente el cobro y se calcularán las comisiones del empleado.
+                  ✓ Al guardar se registrará automáticamente el cobro y se calcularán las comisiones.
+                </div>
+              )}
+
+              {/* BUG 3 FIX — error visible en el form */}
+              {formError && (
+                <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#EF4444' }}>
+                  {formError}
                 </div>
               )}
             </div>
@@ -426,6 +445,8 @@ export default function Reservas() {
                 {paginadas.map(r => {
                   const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
                   const esCompletada = r.estado === 'completada';
+                  const esCancelada = r.estado === 'cancelada';
+                  const waUrl = linkWA(r);
                   return (
                     <div key={r.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:14 }}>
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
@@ -439,7 +460,7 @@ export default function Reservas() {
                         <span style={{ fontSize:12, color:'#A8C4B8', marginLeft:'auto', fontFamily:'DM Mono, monospace' }}>{r.fecha} · {r.hora_inicio?.slice(0,5)}</span>
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                        {!esCompletada && r.estado !== 'cancelada' && (
+                        {!esCompletada && !esCancelada && (
                           <button onClick={() => abrirEdicion(r)}
                             style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:8, cursor:'pointer' }}>
                             Editar
@@ -453,8 +474,8 @@ export default function Reservas() {
                         )}
                         {esCompletada && (
                           <>
-                            {r.clientes?.telefono && (
-                              <a href={linkWA(r)} target="_blank" rel="noopener noreferrer"
+                            {waUrl && (
+                              <a href={waUrl} target="_blank" rel="noopener noreferrer"
                                 style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#25D366', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', textDecoration:'none', textAlign:'center' }}>
                                 💬 Reseña
                               </a>
@@ -465,7 +486,14 @@ export default function Reservas() {
                             </button>
                           </>
                         )}
-                        {r.estado !== 'cancelada' && r.estado !== 'completada' && (
+                        {/* BUG 2 FIX — canceladas pueden reactivarse */}
+                        {esCancelada && (
+                          <button onClick={() => reactivarReserva(r.id)}
+                            style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:8, cursor:'pointer' }}>
+                            Reactivar
+                          </button>
+                        )}
+                        {!esCancelada && !esCompletada && (
                           <button onClick={() => eliminarReserva(r.id)}
                             style={{ padding:'7px 12px', fontSize:12, fontWeight:600, background:'#FEF2F2', color:'#EF4444', border:'none', borderRadius:8, cursor:'pointer' }}>
                             ✕
@@ -489,6 +517,8 @@ export default function Reservas() {
                 {paginadas.map((r, i) => {
                   const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
                   const esCompletada = r.estado === 'completada';
+                  const esCancelada = r.estado === 'cancelada';
+                  const waUrl = linkWA(r);
                   return (
                     <div key={r.id} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 180px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
                       onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
@@ -504,7 +534,7 @@ export default function Reservas() {
                       <div style={{ fontSize:12.5, fontFamily:'DM Mono, monospace', color:'#0B1E16' }}>{r.hora_inicio?.slice(0,5)}</div>
                       <div><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span></div>
                       <div style={{ display:'flex', gap:4 }}>
-                        {!esCompletada && r.estado !== 'cancelada' && (
+                        {!esCompletada && !esCancelada && (
                           <button onClick={() => abrirEdicion(r)}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:6, cursor:'pointer' }}>
                             Editar
@@ -518,8 +548,8 @@ export default function Reservas() {
                         )}
                         {esCompletada && (
                           <>
-                            {r.clientes?.telefono && (
-                              <a href={linkWA(r)} target="_blank" rel="noopener noreferrer"
+                            {waUrl && (
+                              <a href={waUrl} target="_blank" rel="noopener noreferrer"
                                 style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#25D366', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', textDecoration:'none', display:'inline-flex', alignItems:'center' }}>
                                 💬 WA
                               </a>
@@ -530,7 +560,14 @@ export default function Reservas() {
                             </button>
                           </>
                         )}
-                        {r.estado !== 'cancelada' && r.estado !== 'completada' && (
+                        {/* BUG 2 FIX — canceladas pueden reactivarse */}
+                        {esCancelada && (
+                          <button onClick={() => reactivarReserva(r.id)}
+                            style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:6, cursor:'pointer' }}>
+                            Reactivar
+                          </button>
+                        )}
+                        {!esCancelada && !esCompletada && (
                           <button onClick={() => eliminarReserva(r.id)}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#FEF2F2', color:'#EF4444', border:'none', borderRadius:6, cursor:'pointer' }}>
                             ✕
