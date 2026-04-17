@@ -49,7 +49,7 @@ const TITULOS = {
   '/estadisticas': 'Estadísticas',
   '/ajustes':      'Ajustes',
   '/vacaciones':   'Vacaciones',
-  '/qr': 'QR de reserva',
+  '/qr':           'QR de reserva',
   '/fidelizacion': 'Fidelización',
 };
 
@@ -151,10 +151,12 @@ export default function App() {
           <Route path="/"               element={session ? <Navigate to="/dashboard" replace /> : <Landing />} />
           <Route path="/landing"        element={<Landing />} />
           <Route path="/demo"           element={<Demo />} />
+          <Route path="/precios"        element={<Precios />} />
           <Route path="/privacidad"     element={<Privacidad />} />
           <Route path="/terminos"       element={<Terminos />} />
           <Route path="/reservar/:slug" element={<PaginaPublica />} />
           <Route path="/negocio/:slug"  element={<PerfilPublico />} />
+          <Route path="/resena/:slug/:reservaId" element={<DejarResena />} />
 
           {/* Login */}
           <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
@@ -187,14 +189,11 @@ export default function App() {
                   <Route path="/ajustes"             element={<Ajustes />} />
                   <Route path="/vacaciones"          element={<Vacaciones />} />
                   <Route path="/stock"               element={<Stock />} />
-                  <Route path="/qr" element={<QRImprimible />} />
-                  <Route path="/resena/:slug/:reservaId" element={<DejarResena />} />
+                  <Route path="/qr"                  element={<QRImprimible />} />
                   <Route path="/tpv/:reservaId"      element={<TPV />} />
                   <Route path="/pago/exito"          element={<PagoExito />} />
                   <Route path="/pago/cancelado"      element={<PagoCancelado />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
-                  <Route path="/precios" element={<Precios />} />
-
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>
               </Layout>
