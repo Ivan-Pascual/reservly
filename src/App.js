@@ -37,22 +37,48 @@ import QRImprimible from './pages/qr/QRImprimible';
 import Precios from './pages/landing/Precios';
 
 const TITULOS = {
-  '/dashboard':    'Inicio',
-  '/reservas':     'Reservas',
-  '/agenda':       'Agenda semanal',
-  '/clientes':     'Clientes',
-  '/empleados':    'Empleados',
-  '/servicios':    'Servicios',
-  '/comisiones':   'Comisiones',
-  '/bonos':        'Bonos y descuentos',
-  '/valoraciones': 'Valoraciones',
-  '/estadisticas': 'Estadísticas',
-  '/ajustes':      'Ajustes',
-  '/vacaciones':   'Vacaciones',
-  '/qr':           'QR de reserva',
-  '/fidelizacion': 'Fidelización',
+  '/':             { title:'Reservly — Gestión de reservas para negocios locales', canonical:'https://getreservly.com' },
+  '/precios':      { title:'Precios — Reservly vs Booksy y Fresha',                canonical:'https://getreservly.com/precios' },
+  '/demo':         { title:'Demo — Reservly',                                      canonical:'https://getreservly.com/demo' },
+  '/login':        { title:'Entrar — Reservly',                                    canonical:'https://getreservly.com/login' },
+  '/dashboard':    { title:'Inicio — Reservly',                                    canonical:null },
+  '/reservas':     { title:'Reservas — Reservly',                                  canonical:null },
+  '/agenda':       { title:'Agenda — Reservly',                                    canonical:null },
+  '/clientes':     { title:'Clientes — Reservly',                                  canonical:null },
+  '/empleados':    { title:'Empleados — Reservly',                                 canonical:null },
+  '/servicios':    { title:'Servicios — Reservly',                                 canonical:null },
+  '/comisiones':   { title:'Comisiones — Reservly',                                canonical:null },
+  '/bonos':        { title:'Bonos y descuentos — Reservly',                        canonical:null },
+  '/valoraciones': { title:'Valoraciones — Reservly',                              canonical:null },
+  '/estadisticas': { title:'Estadísticas — Reservly',                              canonical:null },
+  '/ajustes':      { title:'Ajustes — Reservly',                                   canonical:null },
+  '/vacaciones':   { title:'Vacaciones — Reservly',                                canonical:null },
+  '/qr':           { title:'QR de reserva — Reservly',                             canonical:null },
+  '/fidelizacion': { title:'Fidelización — Reservly',                              canonical:null },
 };
 
+function TituloManager() {
+  const location = useLocation();
+  useEffect(() => {
+    const ruta = '/' + location.pathname.split('/')[1];
+    const meta = TITULOS[ruta] || TITULOS['/'];
+    document.title = meta.title;
+
+    // Canonical
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    if (meta.canonical) {
+      canonical.href = meta.canonical;
+    } else {
+      canonical.remove();
+    }
+  }, [location]);
+  return null;
+}
 function TituloManager() {
   const location = useLocation();
   useEffect(() => {

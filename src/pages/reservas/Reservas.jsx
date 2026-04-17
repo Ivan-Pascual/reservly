@@ -42,7 +42,7 @@ export default function Reservas() {
   const [modoCliente, setModoCliente] = useState('existente');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(formVacio);
-  const [formError, setFormError] = useState(''); // BUG 3
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     if (!negocio) return;
@@ -79,6 +79,7 @@ export default function Reservas() {
       notas:       r.notas || '',
     });
     setShowForm(true);
+    window.scrollTo({ top:0, behavior:'smooth' });
   };
 
   const cerrarForm = () => {
@@ -92,8 +93,6 @@ export default function Reservas() {
 
   const guardarReserva = async () => {
     setFormError('');
-
-    // BUG 3 FIX — validaciones completas con mensaje visible
     if (modoCliente === 'existente' && !form.cliente_id) {
       setFormError('Selecciona un cliente o crea uno nuevo.');
       return;
@@ -154,9 +153,7 @@ export default function Reservas() {
         setSaving(false);
         return;
       }
-
       await supabase.from('reservas').update(payload).eq('id', editando);
-
       if (form.estado === 'completada' && reservaActual?.estado !== 'completada') {
         const servicio = servicios.find(s => s.id === form.servicio_id);
         const precio = servicio?.precio || 0;
@@ -175,7 +172,6 @@ export default function Reservas() {
     } else {
       const { data: nuevaReserva } = await supabase
         .from('reservas').insert({ ...payload, negocio_id: negocio.id }).select().single();
-
       if (form.estado === 'completada' && nuevaReserva) {
         const servicio = servicios.find(s => s.id === form.servicio_id);
         const precio = servicio?.precio || 0;
@@ -195,7 +191,6 @@ export default function Reservas() {
     setSaving(false);
   };
 
-  // BUG 2 FIX — reactivar en vez de solo cancelar
   const cambiarEstado = async (id, nuevoEstado) => {
     await supabase.from('reservas').update({ estado: nuevoEstado }).eq('id', id);
     fetchTodo();
@@ -216,7 +211,6 @@ export default function Reservas() {
     alert('Link de reseña copiado.');
   };
 
-  // BUG 1 FIX — usar telefono del cliente correctamente
   const linkWA = (r) => {
     const telefono = r.clientes?.telefono;
     if (!telefono) return null;
@@ -387,7 +381,6 @@ export default function Reservas() {
                 </div>
               )}
 
-              {/* BUG 3 FIX — error visible en el form */}
               {formError && (
                 <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#EF4444' }}>
                   {formError}
@@ -445,10 +438,16 @@ export default function Reservas() {
                 {paginadas.map(r => {
                   const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
                   const esCompletada = r.estado === 'completada';
-                  const esCancelada = r.estado === 'cancelada';
-                  const waUrl = linkWA(r);
+                  const esCancelada  = r.estado === 'cancelada';
+                  const clicable     = !esCompletada && !esCancelada;
+                  const waUrl        = linkWA(r);
                   return (
-                    <div key={r.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:14 }}>
+                    <div key={r.id}
+                      onClick={() => clicable && abrirEdicion(r)}
+                      style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:14, cursor: clicable ? 'pointer' : 'default' }}
+                      onMouseEnter={e => { if (clicable) e.currentTarget.style.background='#F4FAF7'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background='#fff'; }}
+                    >
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                         <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{r.clientes?.nombre || '—'}</div>
                         <span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span>
@@ -461,13 +460,13 @@ export default function Reservas() {
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {!esCompletada && !esCancelada && (
-                          <button onClick={() => abrirEdicion(r)}
+                          <button onClick={e => { e.stopPropagation(); abrirEdicion(r); }}
                             style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:8, cursor:'pointer' }}>
                             Editar
                           </button>
                         )}
                         {r.estado === 'confirmada' && (
-                          <button onClick={() => navigate(`/tpv/${r.id}`)}
+                          <button onClick={e => { e.stopPropagation(); navigate(`/tpv/${r.id}`); }}
                             style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#063D2A', color:'#fff', border:'none', borderRadius:8, cursor:'pointer' }}>
                             Cobrar
                           </button>
@@ -475,26 +474,25 @@ export default function Reservas() {
                         {esCompletada && (
                           <>
                             {waUrl && (
-                              <a href={waUrl} target="_blank" rel="noopener noreferrer"
+                              <a href={waUrl} onClick={e => e.stopPropagation()} target="_blank" rel="noopener noreferrer"
                                 style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#25D366', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', textDecoration:'none', textAlign:'center' }}>
                                 💬 Reseña
                               </a>
                             )}
-                            <button onClick={() => copiarLinkResena(r)}
+                            <button onClick={e => { e.stopPropagation(); copiarLinkResena(r); }}
                               style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:8, cursor:'pointer' }}>
                               ⭐ Link
                             </button>
                           </>
                         )}
-                        {/* BUG 2 FIX — canceladas pueden reactivarse */}
                         {esCancelada && (
-                          <button onClick={() => reactivarReserva(r.id)}
+                          <button onClick={e => { e.stopPropagation(); reactivarReserva(r.id); }}
                             style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:8, cursor:'pointer' }}>
                             Reactivar
                           </button>
                         )}
                         {!esCancelada && !esCompletada && (
-                          <button onClick={() => eliminarReserva(r.id)}
+                          <button onClick={e => { e.stopPropagation(); eliminarReserva(r.id); }}
                             style={{ padding:'7px 12px', fontSize:12, fontWeight:600, background:'#FEF2F2', color:'#EF4444', border:'none', borderRadius:8, cursor:'pointer' }}>
                             ✕
                           </button>
@@ -517,10 +515,13 @@ export default function Reservas() {
                 {paginadas.map((r, i) => {
                   const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
                   const esCompletada = r.estado === 'completada';
-                  const esCancelada = r.estado === 'cancelada';
-                  const waUrl = linkWA(r);
+                  const esCancelada  = r.estado === 'cancelada';
+                  const clicable     = !esCompletada && !esCancelada;
+                  const waUrl        = linkWA(r);
                   return (
-                    <div key={r.id} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 180px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
+                    <div key={r.id}
+                      onClick={() => clicable && abrirEdicion(r)}
+                      style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 180px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center', cursor: clicable ? 'pointer' : 'default' }}
                       onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
                       onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                     >
@@ -535,13 +536,13 @@ export default function Reservas() {
                       <div><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span></div>
                       <div style={{ display:'flex', gap:4 }}>
                         {!esCompletada && !esCancelada && (
-                          <button onClick={() => abrirEdicion(r)}
+                          <button onClick={e => { e.stopPropagation(); abrirEdicion(r); }}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:6, cursor:'pointer' }}>
                             Editar
                           </button>
                         )}
                         {r.estado === 'confirmada' && (
-                          <button onClick={() => navigate(`/tpv/${r.id}`)}
+                          <button onClick={e => { e.stopPropagation(); navigate(`/tpv/${r.id}`); }}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#063D2A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer' }}>
                             Cobrar
                           </button>
@@ -549,26 +550,25 @@ export default function Reservas() {
                         {esCompletada && (
                           <>
                             {waUrl && (
-                              <a href={waUrl} target="_blank" rel="noopener noreferrer"
+                              <a href={waUrl} onClick={e => e.stopPropagation()} target="_blank" rel="noopener noreferrer"
                                 style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#25D366', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', textDecoration:'none', display:'inline-flex', alignItems:'center' }}>
                                 💬 WA
                               </a>
                             )}
-                            <button onClick={() => copiarLinkResena(r)}
+                            <button onClick={e => { e.stopPropagation(); copiarLinkResena(r); }}
                               style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#FFF8E7', color:'#92400E', border:'none', borderRadius:6, cursor:'pointer' }}>
                               ⭐
                             </button>
                           </>
                         )}
-                        {/* BUG 2 FIX — canceladas pueden reactivarse */}
                         {esCancelada && (
-                          <button onClick={() => reactivarReserva(r.id)}
+                          <button onClick={e => { e.stopPropagation(); reactivarReserva(r.id); }}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:6, cursor:'pointer' }}>
                             Reactivar
                           </button>
                         )}
                         {!esCancelada && !esCompletada && (
-                          <button onClick={() => eliminarReserva(r.id)}
+                          <button onClick={e => { e.stopPropagation(); eliminarReserva(r.id); }}
                             style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#FEF2F2', color:'#EF4444', border:'none', borderRadius:6, cursor:'pointer' }}>
                             ✕
                           </button>
