@@ -43,124 +43,130 @@ export default function Estadisticas() {
     if (!negocio) return;
     fetchStats();
   }, [negocio, periodo]); // eslint-disable-line react-hooks/exhaustive-deps
+const fetchStats = async () => {
+  setLoading(true);
+  const hoy = new Date();
+  let fechaInicio;
 
-  const fetchStats = async () => {
-    setLoading(true);
-    const hoy = new Date();
-    let fechaInicio;
+  if (periodo === 'semana') {
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - hoy.getDay() + 1);
+    fechaInicio = lunes.toISOString().split('T')[0];
+  } else if (periodo === 'mes') {
+    fechaInicio = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-01`;
+  } else {
+    fechaInicio = `${hoy.getFullYear()}-01-01`;
+  }
 
-    if (periodo === 'semana') {
-      const lunes = new Date(hoy);
-      lunes.setDate(hoy.getDate() - hoy.getDay() + 1);
-      fechaInicio = lunes.toISOString().split('T')[0];
-    } else if (periodo === 'mes') {
-      fechaInicio = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-01`;
-    } else {
-      fechaInicio = `${hoy.getFullYear()}-01-01`;
-    }
+  const fechaFin  = hoy.toISOString().split('T')[0];
+  const inicioAño = `${hoy.getFullYear()}-01-01`;
 
-    const fechaFin = hoy.toISOString().split('T')[0];
+  const [reservasRes, tpvRes, tpvAñoRes, clientesRes, clientesTotalRes] = await Promise.all([
+    supabase.from('reservas')
+      .select('*, servicios(nombre, precio), empleados(nombre, color), clientes(nombre)')
+      .eq('negocio_id', negocio.id)
+      .gte('fecha', fechaInicio).lte('fecha', fechaFin),
+    supabase.from('tpv').select('importe, reserva_id, created_at')
+      .eq('negocio_id', negocio.id)
+      .gte('created_at', fechaInicio + 'T00:00:00')
+      .lte('created_at', fechaFin + 'T23:59:59'),
+    supabase.from('tpv').select('importe, created_at')
+      .eq('negocio_id', negocio.id)
+      .gte('created_at', inicioAño + 'T00:00:00'),
+    supabase.from('clientes').select('id', { count:'exact' })
+      .eq('negocio_id', negocio.id)
+      .gte('created_at', fechaInicio + 'T00:00:00'),
+    supabase.from('clientes').select('id', { count:'exact' })
+      .eq('negocio_id', negocio.id),
+  ]);
 
-    // Para el gráfico de facturación por mes, siempre cogemos el año completo
-    const inicioAño = `${hoy.getFullYear()}-01-01`;
+  const reservas    = reservasRes.data || [];
+  const tpv         = tpvRes.data      || [];
+  const tpvAño      = tpvAñoRes.data   || [];
 
-    const [reservasRes, tpvRes, tpvAñoRes, clientesRes, clientesTotalRes] = await Promise.all([
-      supabase.from('reservas').select('*, servicios(nombre, precio), empleados(nombre, color), clientes(nombre)')
-        .eq('negocio_id', negocio.id).gte('fecha', fechaInicio).lte('fecha', fechaFin),
-      supabase.from('tpv').select('importe, reserva_id, created_at')
-        .eq('negocio_id', negocio.id)
-        .gte('created_at', fechaInicio + 'T00:00:00')
-        .lte('created_at', fechaFin + 'T23:59:59'),
-      supabase.from('tpv').select('importe, created_at')
-        .eq('negocio_id', negocio.id)
-        .gte('created_at', inicioAño + 'T00:00:00'),
-      supabase.from('clientes').select('id', { count:'exact' })
-        .eq('negocio_id', negocio.id).gte('created_at', fechaInicio + 'T00:00:00'),
-      supabase.from('clientes').select('id', { count:'exact' })
-        .eq('negocio_id', negocio.id),
-    ]);
+  // FIX — excluir canceladas de todos los cálculos de actividad
+  const reservasActivas   = reservas.filter(r => r.estado !== 'cancelada');
+  const completadas        = reservas.filter(r => r.estado === 'completada');
+  const canceladas         = reservas.filter(r => r.estado === 'cancelada');
 
-    const reservas   = reservasRes.data || [];
-    const tpv        = tpvRes.data      || [];
-    const tpvAño     = tpvAñoRes.data   || [];
+  const totalFacturado     = tpv.reduce((a, t) => a + (t.importe||0), 0);
+  const ticketMedio        = completadas.length > 0 ? totalFacturado / completadas.length : 0;
+  const tasaCancelacion    = reservas.length > 0 ? Math.round(canceladas.length / reservas.length * 100) : 0;
 
-    const totalFacturado = tpv.reduce((a, t) => a + (t.importe||0), 0);
-    const completadas    = reservas.filter(r => r.estado === 'completada');
-    const canceladas     = reservas.filter(r => r.estado === 'cancelada');
-    const ticketMedio    = completadas.length > 0 ? totalFacturado / completadas.length : 0;
-    const tasaCancelacion = reservas.length > 0 ? Math.round(canceladas.length / reservas.length * 100) : 0;
+  // Facturación por mes (año completo)
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const facturacionPorMes = meses.map((label, i) => {
+    const valor = tpvAño
+      .filter(t => new Date(t.created_at).getMonth() === i)
+      .reduce((a, t) => a + (t.importe||0), 0);
+    return { label, valor };
+  }).slice(0, hoy.getMonth()+1);
 
-    // Facturación por mes (año completo)
-    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    const facturacionPorMes = meses.map((label, i) => {
-      const valor = tpvAño
-        .filter(t => new Date(t.created_at).getMonth() === i)
-        .reduce((a, t) => a + (t.importe||0), 0);
-      return { label, valor };
-    }).slice(0, hoy.getMonth()+1);
+  // FIX — serviciosTop solo con reservas activas (no canceladas)
+  const serviciosMap = {};
+  reservasActivas.filter(r => r.servicios).forEach(r => {
+    const nombre = r.servicios.nombre;
+    if (!serviciosMap[nombre]) serviciosMap[nombre] = { nombre, count:0, facturado:0 };
+    serviciosMap[nombre].count++;
+    const t = tpv.find(t => t.reserva_id === r.id);
+    // Solo sumar facturación si hay TPV real (completada y cobrada)
+    if (t) serviciosMap[nombre].facturado += t.importe || 0;
+  });
+  const serviciosTop = Object.values(serviciosMap).sort((a,b) => b.count-a.count).slice(0,5);
 
-    // Servicios top
-    const serviciosMap = {};
-    reservas.filter(r => r.servicios).forEach(r => {
-      const nombre = r.servicios.nombre;
-      if (!serviciosMap[nombre]) serviciosMap[nombre] = { nombre, count:0, facturado:0 };
-      serviciosMap[nombre].count++;
-      const t = tpv.find(t => t.reserva_id === r.id);
-      serviciosMap[nombre].facturado += t?.importe || r.servicios?.precio || 0;
-    });
-    const serviciosTop = Object.values(serviciosMap).sort((a,b) => b.count-a.count).slice(0,5);
+  // FIX — empleadosTop solo con reservas activas (no canceladas)
+  const empleadosMap = {};
+  reservasActivas.filter(r => r.empleados).forEach(r => {
+    const nombre = r.empleados.nombre;
+    const color  = r.empleados.color;
+    if (!empleadosMap[nombre]) empleadosMap[nombre] = { nombre, color, count:0, facturado:0 };
+    empleadosMap[nombre].count++;
+    const t = tpv.find(t => t.reserva_id === r.id);
+    if (t) empleadosMap[nombre].facturado += t.importe || 0;
+  });
+  const empleadosTop = Object.values(empleadosMap).sort((a,b) => b.count-a.count).slice(0,5);
 
-    // Empleados top
-    const empleadosMap = {};
-    reservas.filter(r => r.empleados).forEach(r => {
-      const nombre = r.empleados.nombre;
-      const color  = r.empleados.color;
-      if (!empleadosMap[nombre]) empleadosMap[nombre] = { nombre, color, count:0, facturado:0 };
-      empleadosMap[nombre].count++;
-      const t = tpv.find(t => t.reserva_id === r.id);
-      empleadosMap[nombre].facturado += t?.importe || r.servicios?.precio || 0;
-    });
-    const empleadosTop = Object.values(empleadosMap).sort((a,b) => b.count-a.count).slice(0,5);
+  // Reservas por día — solo activas
+  const diasLabels = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const porDia = [0,0,0,0,0,0,0];
+  reservasActivas.forEach(r => {
+    if (!r.fecha) return;
+    const d   = new Date(r.fecha + 'T12:00:00');
+    const idx = d.getDay() === 0 ? 6 : d.getDay()-1;
+    porDia[idx]++;
+  });
+  const reservasPorDia = diasLabels.map((label, i) => ({ label, count:porDia[i] }));
 
-    // Reservas por día de la semana
-    const diasLabels = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-    const porDia = [0,0,0,0,0,0,0];
-    reservas.forEach(r => {
-      if (!r.fecha) return;
-      const d = new Date(r.fecha + 'T12:00:00');
-      const idx = d.getDay() === 0 ? 6 : d.getDay()-1;
-      porDia[idx]++;
-    });
-    const reservasPorDia = diasLabels.map((label, i) => ({ label, count:porDia[i] }));
+  // Horas pico — solo activas
+  const porHora = {};
+  reservasActivas.forEach(r => {
+    if (!r.hora_inicio) return;
+    const hora = r.hora_inicio.slice(0,2) + ':00';
+    porHora[hora] = (porHora[hora]||0) + 1;
+  });
+  const horasPico = Object.entries(porHora)
+    .map(([hora, count]) => ({ hora, count }))
+    .sort((a,b) => b.count-a.count).slice(0,3);
 
-    // Horas pico
-    const porHora = {};
-    reservas.forEach(r => {
-      if (!r.hora_inicio) return;
-      const hora = r.hora_inicio.slice(0,2) + ':00';
-      porHora[hora] = (porHora[hora]||0) + 1;
-    });
-    const horasPico = Object.entries(porHora)
-      .map(([hora, count]) => ({ hora, count }))
-      .sort((a,b) => b.count-a.count).slice(0,3);
-
-    // Por estado
-    const reservasPorEstado = {
-      confirmada: reservas.filter(r=>r.estado==='confirmada').length,
-      pendiente:  reservas.filter(r=>r.estado==='pendiente').length,
-      completada: completadas.length,
-      cancelada:  canceladas.length,
-    };
-
-    setStats({
-      totalReservas: reservas.length, totalFacturado, ticketMedio,
-      tasaCancelacion, clientesNuevos: clientesRes.count||0,
-      totalClientes: clientesTotalRes.count||0,
-      serviciosTop, empleadosTop, reservasPorDia,
-      reservasPorEstado, facturacionPorMes, horasPico,
-    });
-    setLoading(false);
+  // Por estado — total incluyendo canceladas para el widget de estados
+  const reservasPorEstado = {
+    confirmada: reservas.filter(r=>r.estado==='confirmada').length,
+    pendiente:  reservas.filter(r=>r.estado==='pendiente').length,
+    completada: completadas.length,
+    cancelada:  canceladas.length,
   };
+
+  setStats({
+    totalReservas:  reservasActivas.length, // FIX — no contar canceladas en total
+    totalFacturado, ticketMedio,
+    tasaCancelacion,
+    clientesNuevos: clientesRes.count||0,
+    totalClientes:  clientesTotalRes.count||0,
+    serviciosTop, empleadosTop, reservasPorDia,
+    reservasPorEstado, facturacionPorMes, horasPico,
+  });
+  setLoading(false);
+};
 
   const pad = isMobile ? 16 : 32;
   const maxDia      = Math.max(...stats.reservasPorDia.map(d => d.count), 1);
