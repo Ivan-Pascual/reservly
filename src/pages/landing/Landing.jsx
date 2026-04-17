@@ -11,7 +11,8 @@ const FEATURES = [
   { emoji:'🔔', titulo:'Alertas instantáneas',  desc:'Notificación push en el móvil cada vez que llega una reserva.' },
   { emoji:'📱', titulo:'Instálala como app',    desc:'PWA instalable en iOS y Android. Sin App Store.' },
   { emoji:'🏅', titulo:'Fidelización',          desc:'Sellos digitales por visita. Tus clientes vuelven solos.' },
-  { emoji:'🔗', titulo:'Widget embebible', desc:'Una línea de código y tienes reservas en tu web.' },        { emoji:'⭐', titulo:'Reseñas verificadas',   desc:'Perfil público con reseñas reales de clientes verificados.' },
+  { emoji:'🔗', titulo:'Widget embebible',      desc:'Una línea de código y tienes reservas en tu web.' },
+  { emoji:'⭐', titulo:'Reseñas verificadas',   desc:'Perfil público con reseñas reales de clientes verificados.' },
   { emoji:'🎁', titulo:'Bonos y descuentos',    desc:'Crea bonos de sesiones y descuentos para fidelizar.' },
 ];
 
@@ -43,6 +44,33 @@ const PLANES = [
     desc: 'Para gestores que llevan varios negocios.',
     features: ['Todo lo del Pro','Multi-sede (5 locales)','Factura electrónica','Panel multi-negocio','API acceso','Soporte prioritario'],
     dark: false,
+  },
+];
+
+const TESTIMONIOS = [
+  {
+    nombre: 'Carmen López',
+    negocio: 'Peluquería Carmen — Zaragoza',
+    texto: 'Antes perdía reservas porque no podía contestar el móvil mientras cortaba. Ahora mis clientes reservan solos y yo me entero al momento. Ha cambiado mi día a día.',
+    avatar: 'CL',
+    color: '#0A9E6E',
+    estrellas: 5,
+  },
+  {
+    nombre: 'Marcos Díaz',
+    negocio: 'Centro de Fisioterapia Díaz — Huesca',
+    texto: 'Llevaba años con una libreta de papel. Reservly me ha dado el control total de mis citas, mis clientes y mi facturación. Y lo más importante: no he perdido ni una cita desde que lo uso.',
+    avatar: 'MD',
+    color: '#3B82F6',
+    estrellas: 5,
+  },
+  {
+    nombre: 'Lucía Ferrer',
+    negocio: 'Studio Nails Lucía — Barcelona',
+    texto: 'Probé Booksy y me cobraba comisión por cada cliente que venía por su plataforma. Con Reservly pago 39€ al mes y mis clientes son míos. La diferencia es brutal.',
+    avatar: 'LF',
+    color: '#EC4899',
+    estrellas: 5,
   },
 ];
 
@@ -92,6 +120,8 @@ export default function Landing() {
         .fade-up-3 { animation: fadeUp 0.7s 0.3s ease both; }
         .fade-up-4 { animation: fadeUp 0.7s 0.45s ease both; }
         .pill { display:inline-flex; align-items:center; gap:6px; background:#E8F7F2; border:1px solid #D6EDE5; border-radius:20px; padding:5px 14px; font-size:12.5px; font-weight:600; color:#063D2A; }
+        .testimonio-card { background:#fff; border:1px solid #EAF5EF; border-radius:20px; padding:28px; transition:all 0.25s; }
+        .testimonio-card:hover { border-color:#D6EDE5; box-shadow:0 8px 32px rgba(10,158,110,0.08); transform:translateY(-2px); }
 
         @media (max-width: 768px) {
           .nav-desktop { display: none !important; }
@@ -106,6 +136,7 @@ export default function Landing() {
           .cta-btns { flex-direction: column !important; }
           .cta-btns button { width: 100% !important; }
           .footer-inner { flex-direction: column !important; align-items: flex-start !important; }
+          .testimonios-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 480px) {
           .features-grid { grid-template-columns: 1fr !important; }
@@ -128,7 +159,7 @@ export default function Landing() {
           <a href="#como-funciona" className="nav-link">Cómo funciona</a>
           <a href="#features" className="nav-link">Funciones</a>
           <a href="#precios" className="nav-link">Precios</a>
-          <a href="/precios" className="nav-link">Comparativa</a>
+          <a href="/precios" className="nav-link">vs Booksy</a>
           <div style={{ display:'flex', gap:8, marginLeft:8 }}>
             <button onClick={() => navigate('/login')} className="btn-secondary" style={{ padding:'8px 18px', fontSize:13 }}>Entrar</button>
             <button onClick={() => navigate('/login')} className="btn-primary" style={{ padding:'8px 18px', fontSize:13 }}>Empezar gratis</button>
@@ -136,7 +167,7 @@ export default function Landing() {
         </div>
 
         {/* Mobile hamburger */}
-        <button className="nav-mobile-btn" onClick={() => setMenuAbierto(!menuAbierto)}
+        <button className="nav-mobile-btn" aria-label="Abrir menú" onClick={() => setMenuAbierto(!menuAbierto)}
           style={{ display:'none', background:'transparent', border:'none', cursor:'pointer', flexDirection:'column', gap:5, padding:8 }}>
           <div style={{ width:22, height:2, background:'#063D2A', borderRadius:2, transition:'all 0.2s', transform: menuAbierto ? 'rotate(45deg) translate(5px, 5px)' : 'none' }}/>
           <div style={{ width:22, height:2, background:'#063D2A', borderRadius:2, transition:'all 0.2s', opacity: menuAbierto ? 0 : 1 }}/>
@@ -204,7 +235,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Dashboard preview — solo desktop */}
+      {/* Dashboard preview */}
       <section className="dashboard-preview" style={{ background:'#063D2A', padding:'60px 6vw', overflow:'hidden' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
           <div style={{ background:'#0A2E1F', borderRadius:20, border:'1px solid rgba(255,255,255,0.08)', overflow:'hidden', boxShadow:'0 40px 80px rgba(0,0,0,0.4)' }}>
@@ -312,8 +343,49 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Testimonios */}
+      <section style={{ padding:'80px 6vw', background:'#fff' }}>
+        <div style={{ maxWidth:1000, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:48 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#0A9E6E', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>Testimonios</div>
+            <h2 style={{ fontSize:'clamp(24px, 3.5vw, 42px)', fontWeight:800, color:'#063D2A', letterSpacing:-1, marginBottom:14 }}>
+              Negocios que ya usan Reservly
+            </h2>
+            <p style={{ fontSize:16, color:'#6B9080', lineHeight:1.7 }}>
+              Sin comisiones, sin marketplaces, sin letra pequeña.
+            </p>
+          </div>
+          <div className="testimonios-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
+            {TESTIMONIOS.map((t, i) => (
+              <div key={i} className="testimonio-card">
+                {/* Estrellas */}
+                <div style={{ display:'flex', gap:3, marginBottom:16 }}>
+                  {Array.from({ length: t.estrellas }).map((_, j) => (
+                    <span key={j} style={{ color:'#F59E0B', fontSize:14 }}>★</span>
+                  ))}
+                </div>
+                {/* Texto */}
+                <p style={{ fontSize:14, color:'#0B1E16', lineHeight:1.7, marginBottom:20, fontStyle:'italic' }}>
+                  "{t.texto}"
+                </p>
+                {/* Autor */}
+                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                  <div style={{ width:40, height:40, borderRadius:'50%', background:t.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:700, color:'#fff', flexShrink:0 }}>
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16' }}>{t.nombre}</div>
+                    <div style={{ fontSize:12, color:'#6B9080' }}>{t.negocio}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Precios */}
-      <section id="precios" style={{ padding:'80px 6vw', background:'#fff' }}>
+      <section id="precios" style={{ padding:'80px 6vw', background:'#F4FAF7' }}>
         <div style={{ maxWidth:1000, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:48 }}>
             <div style={{ fontSize:12, fontWeight:700, color:'#0A9E6E', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>Precios</div>
@@ -326,7 +398,7 @@ export default function Landing() {
           </div>
           <div className="precios-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
             {PLANES.map((p, i) => (
-              <div key={i} style={{ background: p.dark ? '#063D2A' : '#F4FAF7', border: p.dark ? 'none' : '1px solid #EAF5EF', borderRadius:20, padding:'32px 28px', position:'relative', overflow:'hidden' }}>
+              <div key={i} style={{ background: p.dark ? '#063D2A' : '#fff', border: p.dark ? 'none' : '1px solid #EAF5EF', borderRadius:20, padding:'32px 28px', position:'relative', overflow:'hidden' }}>
                 {p.popular && (
                   <div style={{ position:'absolute', top:16, right:16, background:'#0A9E6E', color:'#fff', fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:20 }}>
                     POPULAR
