@@ -11,8 +11,7 @@ const FEATURES = [
   { emoji:'🔔', titulo:'Alertas instantáneas',  desc:'Notificación push en el móvil cada vez que llega una reserva.' },
   { emoji:'📱', titulo:'Instálala como app',    desc:'PWA instalable en iOS y Android. Sin App Store.' },
   { emoji:'🏅', titulo:'Fidelización',          desc:'Sellos digitales por visita. Tus clientes vuelven solos.' },
-  { emoji:'⬛', titulo:'Widget embebible',      desc:'Una línea de código y tienes reservas en tu web.' },
-  { emoji:'⭐', titulo:'Reseñas verificadas',   desc:'Perfil público con reseñas reales de clientes verificados.' },
+  { emoji:'🔗', titulo:'Widget embebible', desc:'Una línea de código y tienes reservas en tu web.' },        { emoji:'⭐', titulo:'Reseñas verificadas',   desc:'Perfil público con reseñas reales de clientes verificados.' },
   { emoji:'🎁', titulo:'Bonos y descuentos',    desc:'Crea bonos de sesiones y descuentos para fidelizar.' },
 ];
 

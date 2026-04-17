@@ -157,7 +157,7 @@ export default function App() {
           <Route path="/reservar/:slug" element={<PaginaPublica />} />
           <Route path="/negocio/:slug"  element={<PerfilPublico />} />
           <Route path="/resena/:slug/:reservaId" element={<DejarResena />} />
-
+          <Route path="/comparativa" element={<Precios />} />
           {/* Login */}
           <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
 
