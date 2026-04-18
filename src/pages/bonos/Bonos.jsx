@@ -4,6 +4,7 @@ import { useNegocio } from '../../hooks/useNegocio';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import PlanGate from '../../components/PlanGate';
 import { usePlan } from '../../hooks/usePlan';
+
 const TIPO_BONO = {
   sesiones: { label:'Pack de sesiones', bg:'#E8F7F2', color:'#063D2A', emoji:'🎯' },
   importe:  { label:'Bono de importe',  bg:'#F5F3FF', color:'#5B21B6', emoji:'💶' },
@@ -12,6 +13,7 @@ const TIPO_BONO = {
 export default function Bonos() {
   const { negocio } = useNegocio();
   const isMobile = useIsMobile();
+  const { puede } = usePlan(); // ← SIEMPRE ARRIBA
   const [bonos, setBonos] = useState([]);
   const [descuentos, setDescuentos] = useState([]);
   const [servicios, setServicios] = useState([]);
@@ -117,14 +119,15 @@ export default function Bonos() {
 
   const pad = isMobile ? 16 : 32;
 
+  // checks DESPUÉS de hooks, ANTES de returns
+  if (!puede('bonos')) return <PlanGate feature="bonos" planRequerido="pro" />;
+
   if (loading) return (
     <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
     </div>
   );
 
-  const { puede } = usePlan();
-if (!puede('bonos')) return <PlanGate feature="bonos" planRequerido="pro" />;
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 

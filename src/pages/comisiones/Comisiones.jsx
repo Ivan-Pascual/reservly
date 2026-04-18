@@ -8,6 +8,7 @@ import { usePlan } from '../../hooks/usePlan';
 export default function Comisiones() {
   const { negocio } = useNegocio();
   const isMobile = useIsMobile();
+  const { puede } = usePlan(); // ← SIEMPRE ARRIBA
   const [empleados, setEmpleados] = useState([]);
   const [comisiones, setComisiones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,15 +65,15 @@ export default function Comisiones() {
   const totalComisiones = comisiones.reduce((a, e) => a + e.comision, 0);
   const totalFacturado = empleados.reduce((a, e) => a + e.facturado, 0);
 
+  // checks DESPUÉS de hooks, ANTES de returns
+  if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="pro" />;
+
   if (loading) return (
     <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
     </div>
   );
 
-
-  const { puede } = usePlan();
-if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="pro" />;
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
@@ -86,13 +87,12 @@ if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="p
 
       <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:16 }}>
 
-        {/* Stats */}
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:10 }}>
           {[
-            { label:'Total comisiones', value: `${totalComisiones.toFixed(2)} EUR`, featured: true },
-            { label:'Total facturado',  value: `${totalFacturado.toFixed(2)} EUR` },
+            { label:'Total comisiones',  value: `${totalComisiones.toFixed(2)} EUR`, featured: true },
+            { label:'Total facturado',   value: `${totalFacturado.toFixed(2)} EUR` },
             { label:'Empleados activos', value: empleados.length },
-            { label:'Con comisión',     value: comisiones.length },
+            { label:'Con comisión',      value: comisiones.length },
           ].map(s => (
             <div key={s.label} style={{ background: s.featured ? '#063D2A' : '#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
               <div style={{ fontSize:11, color: s.featured ? '#ffffff60' : '#6B9080', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:6 }}>{s.label}</div>
@@ -101,7 +101,6 @@ if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="p
           ))}
         </div>
 
-        {/* Lista empleados */}
         {empleados.length > 0 ? (
           isMobile ? (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
@@ -122,9 +121,9 @@ if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="p
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
                     {[
-                      { label:'Citas', value: e.citas },
-                      { label:'Facturado', value: `${e.facturado.toFixed(2)} EUR` },
-                      { label:'Comisión', value: `${e.comision.toFixed(2)} EUR`, highlight: e.comision > 0 },
+                      { label:'Citas',      value: e.citas },
+                      { label:'Facturado',  value: `${e.facturado.toFixed(2)} EUR` },
+                      { label:'Comisión',   value: `${e.comision.toFixed(2)} EUR`, highlight: e.comision > 0 },
                     ].map(d => (
                       <div key={d.label} style={{ background:'#F4FAF7', borderRadius:8, padding:'8px 10px', textAlign:'center' }}>
                         <div style={{ fontSize:10, color:'#6B9080', fontWeight:600, textTransform:'uppercase', marginBottom:3 }}>{d.label}</div>
@@ -165,7 +164,6 @@ if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="p
                   </div>
                 </div>
               ))}
-              {/* Total */}
               <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr', padding:'12px 20px', background:'#F4FAF7', borderTop:'2px solid #EAF5EF', gap:12, alignItems:'center' }}>
                 <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16' }}>Total</div>
                 <div/>
@@ -182,7 +180,6 @@ if (!puede('comisiones')) return <PlanGate feature="comisiones" planRequerido="p
             <div style={{ fontSize:13, color:'#6B9080' }}>Añade empleados con comisión para verlas aquí</div>
           </div>
         )}
-
       </div>
     </div>
   );

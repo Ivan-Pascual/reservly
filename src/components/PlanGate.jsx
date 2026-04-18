@@ -54,9 +54,13 @@ export default function PlanGate({ feature, children, planRequerido = 'pro' }) {
 
         {/* Tu plan actual */}
         <div style={{ background:'#F4FAF7', border:'1px solid #EAF5EF', borderRadius:10, padding:'10px 16px', marginBottom:16, fontSize:13, color:'#6B9080' }}>
-          Tu plan actual: <strong style={{ color:'#0B1E16' }}>{plan === 'trial' ? 'Trial gratuito' : plan === 'basico' ? 'Plan Básico' : plan === 'pro' ? 'Plan Pro' : 'Plan Agencia'}</strong>
-          {' '}→ necesitas el <strong style={{ color: planInfo.color }}>{planInfo.nombre}</strong>
-        </div>
+          Tu plan actual: <strong style={{ color:'#0B1E16' }}>
+  {plan === 'trial' ? 'Trial gratuito' :
+   plan === 'solo'  ? 'Plan Solo' :
+   plan === 'basico'? 'Plan Básico' :
+   plan === 'pro'   ? 'Plan Pro' :
+   plan === 'agencia'? 'Plan Agencia' : 'Trial gratuito'}
+</strong></div>
 
         {/* Precio */}
         <div style={{ background:'#fff', border:`2px solid ${planInfo.color}`, borderRadius:12, padding:'16px 20px', marginBottom:20 }}>
