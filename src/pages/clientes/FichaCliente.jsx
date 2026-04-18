@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useNegocio } from '../../hooks/useNegocio';
 
 const TAG_STYLES = {
   vip:      { bg:'#F5F3FF', color:'#8B5CF6', label:'⭐ VIP'   },
@@ -31,8 +32,10 @@ export default function FichaCliente() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { negocio } = useNegocio();
   const [cliente, setCliente] = useState(null);
   const [reservas, setReservas] = useState([]);
+  const [tpvData, setTpvData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [nota, setNota] = useState('');
   const [guardandoNota, setGuardandoNota] = useState(false);
@@ -55,7 +58,17 @@ export default function FichaCliente() {
       setCliente(cliRes.data);
       setFormEdit(cliRes.data);
     }
-    if (resRes.data) setReservas(resRes.data);
+    if (resRes.data) {
+      setReservas(resRes.data);
+      // Fetch TPV para calcular facturación real
+      const reservaIds = resRes.data.map(r => r.id);
+      if (reservaIds.length > 0) {
+        const { data: tpv } = await supabase
+          .from('tpv').select('reserva_id, importe')
+          .in('reserva_id', reservaIds);
+        if (tpv) setTpvData(tpv);
+      }
+    }
     setLoading(false);
   };
 
@@ -75,15 +88,22 @@ export default function FichaCliente() {
     setGuardandoEdit(true);
     await supabase.from('clientes').update({
       nombre:           formEdit.nombre,
-      telefono:         formEdit.telefono   || null,
-      email:            formEdit.email      || null,
+      telefono:         formEdit.telefono        || null,
+      email:            formEdit.email           || null,
       tag:              formEdit.tag,
-      sexo:             formEdit.sexo       || null,
+      sexo:             formEdit.sexo            || null,
       fecha_nacimiento: formEdit.fecha_nacimiento || null,
     }).eq('id', id);
     setGuardandoEdit(false);
     setEditando(false);
     fetchData();
+  };
+
+  const linkWA = () => {
+    if (!cliente?.telefono) return null;
+    const tel = cliente.telefono.replace(/\s/g,'').replace('+','');
+    if (!tel || !/^\d+$/.test(tel)) return null;
+    return `https://wa.me/${tel}`;
   };
 
   if (loading) return (
@@ -99,11 +119,18 @@ export default function FichaCliente() {
   );
 
   const tag = TAG_STYLES[cliente.tag] || TAG_STYLES.regular;
-  const totalGastado = reservas.filter(r=>r.estado==='completada').reduce((a,r)=>a+(r.servicios?.precio||0),0);
-  const visitas = reservas.filter(r=>r.estado==='completada').length;
-  const canceladas = reservas.filter(r=>r.estado==='cancelada').length;
-  const edad = calcularEdad(cliente.fecha_nacimiento);
-  const pad = isMobile ? 16 : 32;
+  const completadas    = reservas.filter(r => r.estado === 'completada');
+  const canceladas     = reservas.filter(r => r.estado === 'cancelada');
+  const visitas        = completadas.length;
+  const totalGastado   = completadas.reduce((a, r) => {
+    const tpv = tpvData.find(t => t.reserva_id === r.id);
+    return a + (tpv?.importe || r.servicios?.precio || 0);
+  }, 0);
+  const ticketMedio    = visitas > 0 ? totalGastado / visitas : 0;
+  const ultimaVisita   = completadas[0];
+  const edad           = calcularEdad(cliente.fecha_nacimiento);
+  const pad            = isMobile ? 16 : 32;
+  const waUrl          = linkWA();
 
   const inputStyle = {
     width:'100%', padding:'8px 12px',
@@ -123,7 +150,13 @@ export default function FichaCliente() {
         </button>
         <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16', flex:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{cliente.nombre}</div>
         <span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:tag.bg, color:tag.color, flexShrink:0 }}>{tag.label}</span>
-        <div style={{ marginLeft:'auto', display:'flex', gap:8, flexShrink:0 }}>
+        <div style={{ marginLeft:'auto', display:'flex', gap:6, flexShrink:0 }}>
+          {waUrl && (
+            <a href={waUrl} target="_blank" rel="noopener noreferrer"
+              style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'7px 12px', background:'#25D366', color:'#fff', border:'none', borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer', textDecoration:'none' }}>
+              💬 WhatsApp
+            </a>
+          )}
           {editando ? (
             <>
               <button onClick={guardarEdicion} disabled={guardandoEdit}
@@ -138,7 +171,7 @@ export default function FichaCliente() {
           ) : (
             <button onClick={() => setEditando(true)}
               style={{ background:'transparent', color:'#6B9080', border:'1px solid #D6EDE5', padding:'7px 14px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-              Editar cliente
+              Editar
             </button>
           )}
         </div>
@@ -146,54 +179,63 @@ export default function FichaCliente() {
 
       <div style={{ padding:pad, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap:20 }}>
 
-        {/* LEFT — Ficha */}
+        {/* LEFT */}
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
-          {/* Avatar + info */}
+          {/* Avatar + stats */}
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-            <div style={{ background:'#063D2A', padding:'20px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap:8, textAlign:'center' }}>
-              <div style={{ width:60, height:60, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:700, color:'#fff', border:'3px solid #ffffff20' }}>
+            <div style={{ background:'linear-gradient(135deg, #063D2A 0%, #0A4D2E 100%)', padding:'24px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap:8, textAlign:'center' }}>
+              <div style={{ width:64, height:64, borderRadius:'50%', background:'#0A9E6E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, fontWeight:700, color:'#fff', border:'3px solid rgba(255,255,255,0.2)', boxShadow:'0 4px 16px rgba(0,0,0,0.2)' }}>
                 {cliente.nombre[0].toUpperCase()}
               </div>
               <div style={{ fontSize:17, fontWeight:700, color:'#fff' }}>{cliente.nombre}</div>
-              <div style={{ fontSize:11.5, color:'#ffffff60' }}>
+              <div style={{ fontSize:11.5, color:'rgba(255,255,255,0.5)' }}>
                 Cliente desde {new Date(cliente.created_at).toLocaleDateString('es-ES', { month:'long', year:'numeric' })}
               </div>
               <span style={{ fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:20, background:tag.bg, color:tag.color }}>{tag.label}</span>
             </div>
 
-            {/* Stats mini */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1, background:'#EAF5EF' }}>
+            {/* Stats — 4 métricas */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:'#EAF5EF' }}>
               {[
-                { val: visitas,              label:'Visitas'  },
-                { val: totalGastado + ' EUR', label:'Total'   },
-                { val: canceladas,           label:'Cancel.'  },
+                { val: visitas,                         label:'Visitas',       color:'#0B1E16' },
+                { val: `${totalGastado.toFixed(0)}€`,   label:'Total gastado', color:'#0A9E6E' },
+                { val: `${ticketMedio.toFixed(0)}€`,    label:'Ticket medio',  color:'#0B1E16' },
+                { val: canceladas.length,               label:'Canceladas',    color: canceladas.length > 0 ? '#EF4444' : '#A8C4B8' },
               ].map(s => (
                 <div key={s.label} style={{ background:'#fff', padding:'12px 8px', textAlign:'center' }}>
-                  <div style={{ fontSize:18, fontWeight:700, color:'#0B1E16', fontFamily:'DM Mono, monospace' }}>{s.val}</div>
-                  <div style={{ fontSize:10.5, color:'#6B9080', marginTop:2 }}>{s.label}</div>
+                  <div style={{ fontSize:20, fontWeight:700, color:s.color, fontFamily:'DM Mono, monospace', lineHeight:1 }}>{s.val}</div>
+                  <div style={{ fontSize:10.5, color:'#6B9080', marginTop:3 }}>{s.label}</div>
                 </div>
               ))}
             </div>
 
-            {/* Info editable / lectura */}
+            {/* Última visita */}
+            {ultimaVisita && (
+              <div style={{ padding:'12px 16px', borderTop:'1px solid #EAF5EF', background:'#F4FAF7' }}>
+                <div style={{ fontSize:10, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:5 }}>Última visita</div>
+                <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>{ultimaVisita.servicios?.nombre || 'Servicio'}</div>
+                <div style={{ fontSize:12, color:'#6B9080', marginTop:2 }}>{ultimaVisita.fecha} · {ultimaVisita.hora_inicio?.slice(0,5)}</div>
+              </div>
+            )}
+
+            {/* Info de contacto */}
             <div style={{ padding:'14px 16px' }}>
               {editando ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  <div>
-                    <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:4 }}>Nombre</div>
-                    <input value={formEdit.nombre || ''} onChange={e=>setFormEdit({...formEdit, nombre:e.target.value})} style={inputStyle}/>
-                  </div>
-                  <div>
-                    <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:4 }}>Teléfono</div>
-                    <input value={formEdit.telefono || ''} onChange={e=>setFormEdit({...formEdit, telefono:e.target.value})}
-                      style={{ ...inputStyle, fontFamily:'DM Mono, monospace' }}/>
-                  </div>
-                  <div>
-                    <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:4 }}>Email</div>
-                    <input value={formEdit.email || ''} onChange={e=>setFormEdit({...formEdit, email:e.target.value})}
-                      type="email" style={inputStyle}/>
-                  </div>
+                  {[
+                    { key:'nombre',           label:'Nombre',           type:'text',   mono:false },
+                    { key:'telefono',         label:'Teléfono',         type:'text',   mono:true  },
+                    { key:'email',            label:'Email',            type:'email',  mono:false },
+                    { key:'fecha_nacimiento', label:'Fecha nacimiento', type:'date',   mono:true  },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:4 }}>{f.label}</div>
+                      <input type={f.type} value={formEdit[f.key] || ''}
+                        onChange={e => setFormEdit({...formEdit, [f.key]: e.target.value})}
+                        style={{ ...inputStyle, fontFamily: f.mono ? 'DM Mono, monospace' : 'DM Sans, sans-serif' }}/>
+                    </div>
+                  ))}
                   <div>
                     <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:4 }}>Sexo</div>
                     <select value={formEdit.sexo || ''} onChange={e=>setFormEdit({...formEdit, sexo:e.target.value})} style={inputStyle}>
@@ -202,11 +244,6 @@ export default function FichaCliente() {
                       <option value="mujer">Mujer</option>
                       <option value="otro">Otro</option>
                     </select>
-                  </div>
-                  <div>
-                    <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:4 }}>Fecha de nacimiento</div>
-                    <input type="date" value={formEdit.fecha_nacimiento || ''}
-                      onChange={e=>setFormEdit({...formEdit, fecha_nacimiento:e.target.value})} style={inputStyle}/>
                   </div>
                   <div>
                     <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:4 }}>Etiqueta</div>
@@ -221,18 +258,43 @@ export default function FichaCliente() {
               ) : (
                 <div>
                   {[
-                    { label:'Teléfono',  val: cliente.telefono,         mono: true },
-                    { label:'Email',     val: cliente.email                        },
-                    { label:'Sexo',      val: cliente.sexo ? cliente.sexo.charAt(0).toUpperCase() + cliente.sexo.slice(1) : null },
-                    { label:'Edad',      val: edad !== null ? `${edad} años` : null },
-                    { label:'Nacimiento',val: cliente.fecha_nacimiento             },
-                  ].map(f => f.val ? (
+                    { label:'Teléfono',   val: cliente.telefono,  mono: true  },
+                    { label:'Email',      val: cliente.email,     mono: false },
+                    { label:'Sexo',       val: cliente.sexo ? cliente.sexo.charAt(0).toUpperCase() + cliente.sexo.slice(1) : null },
+                    { label:'Edad',       val: edad !== null ? `${edad} años` : null },
+                    { label:'Nacimiento', val: cliente.fecha_nacimiento },
+                  ].filter(f => f.val).map(f => (
                     <div key={f.label} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #EAF5EF', gap:12 }}>
                       <div style={{ fontSize:11.5, color:'#6B9080', fontWeight:500, flexShrink:0 }}>{f.label}</div>
                       <div style={{ fontSize:13, color:'#0B1E16', fontFamily: f.mono ? 'DM Mono, monospace' : 'inherit', textAlign:'right' }}>{f.val}</div>
                     </div>
-                  ) : null)}
+                  ))}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Acciones rápidas */}
+          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:14 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>
+              Acciones rápidas
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <button onClick={() => navigate('/reservas')}
+                style={{ width:'100%', padding:'9px 14px', background:'#063D2A', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', textAlign:'left' }}>
+                📅 Nueva reserva para este cliente
+              </button>
+              {waUrl && (
+                <a href={waUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ display:'block', width:'100%', padding:'9px 14px', background:'#25D366', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', textDecoration:'none', textAlign:'left' }}>
+                  💬 Abrir WhatsApp
+                </a>
+              )}
+              {cliente.email && (
+                <a href={`mailto:${cliente.email}`}
+                  style={{ display:'block', padding:'9px 14px', background:'#F4FAF7', color:'#6B9080', border:'1px solid #D6EDE5', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', textDecoration:'none', textAlign:'left' }}>
+                  ✉️ Enviar email
+                </a>
               )}
             </div>
           </div>
@@ -253,7 +315,7 @@ export default function FichaCliente() {
             ) : (
               <div style={{ fontSize:12.5, color:'#A8C4B8', marginBottom:8 }}>Sin notas aún</div>
             )}
-            <textarea value={nota} onChange={e=>setNota(e.target.value)}
+            <textarea value={nota} onChange={e => setNota(e.target.value)}
               placeholder="Añadir nota... (alergias, preferencias...)"
               style={{ width:'100%', padding:'8px 10px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:12.5, fontFamily:'DM Sans, sans-serif', outline:'none', minHeight:60, resize:'vertical', marginBottom:6 }}/>
             <button onClick={guardarNota} disabled={guardandoNota || !nota.trim()}
@@ -268,23 +330,24 @@ export default function FichaCliente() {
 
           {/* Próxima cita */}
           {(() => {
-            const proxima = reservas.find(r => r.estado==='confirmada' || r.estado==='pendiente');
+            const proxima = reservas.find(r => r.estado === 'confirmada' || r.estado === 'pendiente');
             if (!proxima) return null;
             const s = ESTADO_STYLES[proxima.estado];
             return (
-              <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'14px 18px', display:'flex', alignItems:'center', gap:14, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+              <div style={{ background:'#fff', border:'2px solid #0A9E6E', borderRadius:14, padding:'14px 18px', display:'flex', alignItems:'center', gap:14, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
                 <div style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:10, padding:'10px 14px', textAlign:'center', flexShrink:0 }}>
-                  <div style={{ fontSize:20, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace', lineHeight:1 }}>
-                    {new Date(proxima.fecha).getDate()}
+                  <div style={{ fontSize:22, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace', lineHeight:1 }}>
+                    {new Date(proxima.fecha + 'T12:00:00').getDate()}
                   </div>
                   <div style={{ fontSize:10, color:'#6B9080', fontWeight:600, textTransform:'uppercase', marginTop:2 }}>
-                    {new Date(proxima.fecha).toLocaleDateString('es-ES', { month:'short' })}
+                    {new Date(proxima.fecha + 'T12:00:00').toLocaleDateString('es-ES', { month:'short' })}
                   </div>
                 </div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{proxima.servicios?.nombre || 'Servicio'}</div>
+                  <div style={{ fontSize:11, fontWeight:700, color:'#0A9E6E', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:3 }}>Próxima cita</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>{proxima.servicios?.nombre || 'Servicio'}</div>
                   <div style={{ fontSize:12.5, color:'#6B9080', marginTop:3 }}>
-                    {proxima.fecha} · {proxima.hora_inicio?.slice(0,5)} · {proxima.empleados?.nombre || 'Sin empleado'}
+                    {proxima.fecha} · {proxima.hora_inicio?.slice(0,5)}{proxima.empleados ? ` · ${proxima.empleados.nombre}` : ''}
                   </div>
                 </div>
                 <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:s.bg, color:s.color, flexShrink:0 }}>{s.label}</span>
@@ -292,63 +355,66 @@ export default function FichaCliente() {
             );
           })()}
 
-          {/* Historial */}
+          {/* Historial completo */}
           <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
             <div style={{ padding:'14px 18px', borderBottom:'1px solid #EAF5EF', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <div>
                 <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>Historial de visitas</div>
-                <div style={{ fontSize:12, color:'#6B9080', marginTop:1 }}>{reservas.length} reservas totales</div>
+                <div style={{ fontSize:12, color:'#6B9080', marginTop:1 }}>{reservas.length} reservas · {visitas} completadas</div>
+              </div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace' }}>
+                {totalGastado.toFixed(2)} EUR
               </div>
             </div>
 
-            {reservas.length > 0 ? (
-              reservas.map((r, i) => {
-                const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
-                return isMobile ? (
-                  <div key={r.id} style={{ padding:'12px 16px', borderBottom: i<reservas.length-1?'1px solid #EAF5EF':'none' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
-                      <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{r.servicios?.nombre || 'Servicio'}</div>
-                      <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span>
+            {reservas.length > 0 ? reservas.map((r, i) => {
+              const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
+              const tpv = tpvData.find(t => t.reserva_id === r.id);
+              const precio = tpv?.importe || r.servicios?.precio;
+              return isMobile ? (
+                <div key={r.id} style={{ padding:'12px 16px', borderBottom: i<reservas.length-1?'1px solid #EAF5EF':'none' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
+                    <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{r.servicios?.nombre || 'Servicio'}</div>
+                    <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span>
+                  </div>
+                  <div style={{ fontSize:12, color:'#6B9080' }}>
+                    {r.fecha} · {r.hora_inicio?.slice(0,5)}{r.empleados ? ` · ${r.empleados.nombre}` : ''}
+                  </div>
+                  {precio && (
+                    <div style={{ fontSize:13, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace', marginTop:4 }}>
+                      {precio} EUR
                     </div>
-                    <div style={{ fontSize:12, color:'#6B9080' }}>
-                      {r.fecha} · {r.hora_inicio?.slice(0,5)}
-                      {r.empleados && ` · ${r.empleados.nombre}`}
-                    </div>
-                    {r.servicios?.precio && (
-                      <div style={{ fontSize:13, fontWeight:700, color:'#0A9E6E', fontFamily:'DM Mono, monospace', marginTop:4 }}>
-                        {r.servicios.precio} EUR
+                  )}
+                </div>
+              ) : (
+                <div key={r.id}
+                  style={{ display:'grid', gridTemplateColumns:'130px 1fr auto', gap:16, padding:'14px 18px', borderBottom: i<reservas.length-1?'1px solid #EAF5EF':'none', alignItems:'start' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                >
+                  <div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#0B1E16', fontFamily:'DM Mono, monospace' }}>{r.fecha}</div>
+                    <div style={{ fontSize:11, color:'#6B9080', fontFamily:'DM Mono, monospace' }}>{r.hora_inicio?.slice(0,5)}</div>
+                    {r.empleados && (
+                      <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:4 }}>
+                        <div style={{ width:6, height:6, borderRadius:'50%', background:r.empleados.color||'#ccc' }}/>
+                        <span style={{ fontSize:11, color:'#6B9080' }}>{r.empleados.nombre}</span>
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div key={r.id} style={{ display:'grid', gridTemplateColumns:'130px 1fr auto', gap:16, padding:'14px 18px', borderBottom: i<reservas.length-1?'1px solid #EAF5EF':'none', alignItems:'start' }}
-                    onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
-                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}
-                  >
-                    <div>
-                      <div style={{ fontSize:12, fontWeight:700, color:'#0B1E16', fontFamily:'DM Mono, monospace' }}>{r.fecha}</div>
-                      <div style={{ fontSize:11, color:'#6B9080', fontFamily:'DM Mono, monospace' }}>{r.hora_inicio?.slice(0,5)}</div>
-                      {r.empleados && (
-                        <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:4 }}>
-                          <div style={{ width:6, height:6, borderRadius:'50%', background:r.empleados.color||'#ccc' }}/>
-                          <span style={{ fontSize:11, color:'#6B9080' }}>{r.empleados.nombre}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{r.servicios?.nombre || 'Servicio'}</div>
-                      {r.notas && <div style={{ fontSize:12, color:'#6B9080', marginTop:4, fontStyle:'italic' }}>"{r.notas}"</div>}
-                    </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono, monospace', color:'#0B1E16' }}>
-                        {r.servicios?.precio ? `${r.servicios.precio} EUR` : '—'}
-                      </div>
-                      <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.bg, color:s.color, marginTop:4, display:'inline-block' }}>{s.label}</span>
-                    </div>
+                  <div>
+                    <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{r.servicios?.nombre || 'Servicio'}</div>
+                    {r.notas && <div style={{ fontSize:12, color:'#6B9080', marginTop:4, fontStyle:'italic' }}>"{r.notas}"</div>}
                   </div>
-                );
-              })
-            ) : (
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:14, fontWeight:700, fontFamily:'DM Mono, monospace', color: precio ? '#0A9E6E' : '#A8C4B8' }}>
+                      {precio ? `${precio} EUR` : '—'}
+                    </div>
+                    <span style={{ fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:20, background:s.bg, color:s.color, marginTop:4, display:'inline-block' }}>{s.label}</span>
+                  </div>
+                </div>
+              );
+            }) : (
               <div style={{ padding:40, textAlign:'center', color:'#A8C4B8' }}>
                 <div style={{ fontSize:32, marginBottom:8 }}>📅</div>
                 <div style={{ fontSize:14 }}>Sin reservas aún</div>
