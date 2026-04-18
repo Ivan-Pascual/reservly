@@ -79,15 +79,6 @@ function TituloManager() {
   }, [location]);
   return null;
 }
-function TituloManager() {
-  const location = useLocation();
-  useEffect(() => {
-    const ruta = '/' + location.pathname.split('/')[1];
-    const titulo = TITULOS[ruta];
-    document.title = titulo ? `${titulo} — Reservly` : 'Reservly';
-  }, [location]);
-  return null;
-}
 
 function NotFound() {
   const navigate = useNavigate();
