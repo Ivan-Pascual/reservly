@@ -24,30 +24,22 @@ const Toggle = ({ on, onChange }) => (
 
 const PLANES = [
   {
-    plan: 'basico',
-    nombre: 'Básico',
-    precio: 19,
+    plan: 'basico', nombre: 'Básico', precio: 19,
     desc: 'Para autónomos y negocios de una persona.',
     features: ['Reservas ilimitadas','Hasta 2 empleados','TPV y stock con escáner','Google Calendar sync','Notificaciones push','PWA instalable','Backup de datos'],
   },
   {
-    plan: 'pro',
-    nombre: 'Pro',
-    precio: 39,
+    plan: 'pro', nombre: 'Pro', precio: 39, destacado: true,
     desc: 'Para negocios con equipo que quieren automatizar.',
-    destacado: true,
     features: ['Todo lo del Básico','Empleados ilimitados','WhatsApp automático','Fidelización con sellos','Widget embebible','Perfil público + reseñas','Formulario de admisión','Comisiones automáticas','Bonos y descuentos','Estadísticas avanzadas'],
   },
   {
-    plan: 'agencia',
-    nombre: 'Agencia',
-    precio: 79,
+    plan: 'agencia', nombre: 'Agencia', precio: 79,
     desc: 'Para gestores que llevan varios negocios.',
     features: ['Todo lo del Pro','Multi-sede (5 locales)','Factura electrónica','Panel multi-negocio','API acceso','White label parcial','Soporte prioritario'],
   },
 ];
 
-// ── Fuera del componente para evitar pérdida de foco ──
 const Section = ({ title, children }) => (
   <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden', marginBottom:16 }}>
     <div style={{ padding:'16px 20px', borderBottom:'1px solid #EAF5EF', fontSize:14, fontWeight:700, color:'#0B1E16' }}>{title}</div>
@@ -211,10 +203,8 @@ export default function Ajustes() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          negocioId:     negocio.id,
-          email:         negocio.email || '',
-          nombreNegocio: negocio.nombre || '',
-          plan,
+          negocioId: negocio.id, email: negocio.email || '',
+          nombreNegocio: negocio.nombre || '', plan,
         }),
       });
       const data = await res.json();
@@ -254,26 +244,11 @@ export default function Ajustes() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
-
-      <style>{`
-        @keyframes slideIn {
-          from { opacity:0; transform:translateY(12px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-      `}</style>
+      <style>{`@keyframes slideIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }`}</style>
 
       {saved && (
-        <div style={{
-          position:'fixed', bottom:24, right:24, zIndex:9999,
-          background:'#063D2A', color:'#fff',
-          padding:'12px 20px', borderRadius:12,
-          fontSize:13, fontWeight:600,
-          display:'flex', alignItems:'center', gap:8,
-          boxShadow:'0 8px 24px rgba(0,0,0,0.15)',
-          animation:'slideIn 0.2s ease',
-        }}>
-          <span style={{ fontSize:16 }}>✓</span>
-          Cambios guardados correctamente
+        <div style={{ position:'fixed', bottom:24, right:24, zIndex:9999, background:'#063D2A', color:'#fff', padding:'12px 20px', borderRadius:12, fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:8, boxShadow:'0 8px 24px rgba(0,0,0,0.15)', animation:'slideIn 0.2s ease' }}>
+          <span style={{ fontSize:16 }}>✓</span> Cambios guardados correctamente
         </div>
       )}
 
@@ -281,53 +256,70 @@ export default function Ajustes() {
       <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:16 }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Ajustes</div>
         <div style={{ marginLeft:'auto' }}>
-          <button onClick={guardar} disabled={saving} style={{
-            background: saving ? '#A8C4B8' : '#0A9E6E', color:'#fff',
-            border:'none', padding:'8px 20px', borderRadius:8,
-            fontSize:13, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer',
-          }}>
+          <button onClick={guardar} disabled={saving} style={{ background: saving ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
       </div>
 
-      {/* Grid */}
       <div style={{ padding:pad, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:20 }}>
 
         {/* ── Col izquierda ── */}
         <div>
           <Section title="Información del negocio">
-            {[
-              { key:'nombre',    label:'Nombre del negocio' },
-              { key:'slug',      label:'URL pública', prefix:'getreservly.com/reservar/', mono:true },
-              { key:'telefono',  label:'Teléfono', mono:true },
-              { key:'email',     label:'Email de contacto', type:'email' },
-              { key:'direccion', label:'Dirección' },
-            ].map(f => (
-              <div key={f.key} style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:5 }}>{f.label}</div>
-                {f.prefix ? (
-                  <div style={{ display:'flex', border:'1.5px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
-                    <span style={{ padding:'8px 10px', background:'#EAF5EF', fontSize:11, color:'#6B9080', borderRight:'1px solid #D6EDE5', whiteSpace:'nowrap' }}>{f.prefix}</span>
-                    <input
-                      value={info[f.key]}
-                      onChange={e => setInfo(p => ({ ...p, [f.key]: e.target.value }))}
-                      onBlur={() => setInfo(p => ({ ...p, slug: slugificar(p.slug) }))}
-                      style={{ flex:1, padding:'8px 10px', border:'none', outline:'none', fontSize:13, fontFamily:'DM Mono, monospace', background:'#F4FAF7', minWidth:0 }}
-                    />
-                  </div>
-                ) : (
-                  <input
-                    value={info[f.key]}
-                    onChange={e => setInfo(p => ({ ...p, [f.key]: e.target.value }))}
-                    type={f.type || 'text'}
-                    style={{ ...inputStyle, fontFamily: f.mono ? 'DM Mono, monospace' : 'DM Sans, sans-serif' }}
-                    onFocus={e => e.target.style.borderColor='#0A9E6E'}
-                    onBlur={e => e.target.style.borderColor='#D6EDE5'}
-                  />
-                )}
+            <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:5 }}>Nombre del negocio</div>
+              <input
+                value={info.nombre}
+                onChange={e => setInfo(p => ({ ...p, nombre: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor='#0A9E6E'}
+                onBlur={e => e.target.style.borderColor='#D6EDE5'}
+              />
+            </div>
+            <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:5 }}>URL pública</div>
+              <div style={{ display:'flex', border:'1.5px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
+                <span style={{ padding:'8px 10px', background:'#EAF5EF', fontSize:11, color:'#6B9080', borderRight:'1px solid #D6EDE5', whiteSpace:'nowrap' }}>getreservly.com/reservar/</span>
+                <input
+                  value={info.slug}
+                  onChange={e => setInfo(p => ({ ...p, slug: e.target.value }))}
+                  onBlur={() => setInfo(p => ({ ...p, slug: slugificar(p.slug) }))}
+                  style={{ flex:1, padding:'8px 10px', border:'none', outline:'none', fontSize:13, fontFamily:'DM Mono, monospace', background:'#F4FAF7', minWidth:0 }}
+                />
               </div>
-            ))}
+            </div>
+            <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:5 }}>Teléfono</div>
+              <input
+                value={info.telefono}
+                onChange={e => setInfo(p => ({ ...p, telefono: e.target.value }))}
+                style={{ ...inputStyle, fontFamily:'DM Mono, monospace' }}
+                onFocus={e => e.target.style.borderColor='#0A9E6E'}
+                onBlur={e => e.target.style.borderColor='#D6EDE5'}
+              />
+            </div>
+            <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:5 }}>Email de contacto</div>
+              <input
+                value={info.email}
+                type="email"
+                onChange={e => setInfo(p => ({ ...p, email: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor='#0A9E6E'}
+                onBlur={e => e.target.style.borderColor='#D6EDE5'}
+              />
+            </div>
+            <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
+              <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:5 }}>Dirección</div>
+              <input
+                value={info.direccion}
+                onChange={e => setInfo(p => ({ ...p, direccion: e.target.value }))}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor='#0A9E6E'}
+                onBlur={e => e.target.style.borderColor='#D6EDE5'}
+              />
+            </div>
             <div style={{ padding:'12px 0' }}>
               <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:8 }}>Tu perfil público</div>
               <div style={{ display:'flex', gap:8 }}>
@@ -371,13 +363,10 @@ export default function Ajustes() {
           <Section title="Horario de apertura">
             <div style={{ padding:'8px 0' }}>
               {[
-                { key:'lunes',     label:'Lunes'      },
-                { key:'martes',    label:'Martes'     },
-                { key:'miercoles', label:'Miércoles'  },
-                { key:'jueves',    label:'Jueves'     },
-                { key:'viernes',   label:'Viernes'    },
-                { key:'sabado',    label:'Sábado'     },
-                { key:'domingo',   label:'Domingo'    },
+                { key:'lunes', label:'Lunes' }, { key:'martes', label:'Martes' },
+                { key:'miercoles', label:'Miércoles' }, { key:'jueves', label:'Jueves' },
+                { key:'viernes', label:'Viernes' }, { key:'sabado', label:'Sábado' },
+                { key:'domingo', label:'Domingo' },
               ].map((dia, i, arr) => {
                 const h = horario[dia.key];
                 return (
@@ -409,7 +398,6 @@ export default function Ajustes() {
             <div style={{ height:4 }}/>
           </Section>
 
-          {/* Plan y suscripción */}
           <Section title="Plan y suscripción">
             <div style={{ padding:'14px 0' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, padding:'12px 14px', background:'#F4FAF7', borderRadius:10, flexWrap:'wrap', gap:8 }}>
@@ -419,24 +407,15 @@ export default function Ajustes() {
                 </div>
                 <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#E8F7F2', color:'#063D2A' }}>● Activo</span>
               </div>
-
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {PLANES.map(p => (
-                  <div key={p.plan} style={{
-                    border: `1.5px solid ${planActivo === p.plan ? '#0A9E6E' : p.destacado ? '#0A9E6E' : '#EAF5EF'}`,
-                    borderRadius:12, overflow:'hidden',
-                    background: planActivo === p.plan ? '#E8F7F2' : '#fff',
-                  }}>
+                  <div key={p.plan} style={{ border:`1.5px solid ${planActivo===p.plan ? '#0A9E6E' : p.destacado ? '#0A9E6E' : '#EAF5EF'}`, borderRadius:12, overflow:'hidden', background: planActivo===p.plan ? '#E8F7F2' : '#fff' }}>
                     <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                           <span style={{ fontSize:13, fontWeight:700, color:'#0B1E16' }}>{p.nombre}</span>
-                          {p.destacado && planActivo !== p.plan && (
-                            <span style={{ fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:20, background:'#0A9E6E', color:'#fff' }}>POPULAR</span>
-                          )}
-                          {planActivo === p.plan && (
-                            <span style={{ fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:20, background:'#063D2A', color:'#fff' }}>ACTIVO</span>
-                          )}
+                          {p.destacado && planActivo!==p.plan && <span style={{ fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:20, background:'#0A9E6E', color:'#fff' }}>POPULAR</span>}
+                          {planActivo===p.plan && <span style={{ fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:20, background:'#063D2A', color:'#fff' }}>ACTIVO</span>}
                         </div>
                         <div style={{ fontSize:11.5, color:'#6B9080', marginTop:2 }}>{p.desc}</div>
                       </div>
@@ -449,11 +428,9 @@ export default function Ajustes() {
                       {p.features.slice(0,4).map((f, i) => (
                         <span key={i} style={{ fontSize:11, color:'#6B9080', background:'#F4FAF7', padding:'2px 8px', borderRadius:20 }}>✓ {f}</span>
                       ))}
-                      {p.features.length > 4 && (
-                        <span style={{ fontSize:11, color:'#A8C4B8', padding:'2px 8px' }}>+{p.features.length - 4} más</span>
-                      )}
+                      {p.features.length > 4 && <span style={{ fontSize:11, color:'#A8C4B8', padding:'2px 8px' }}>+{p.features.length-4} más</span>}
                     </div>
-                    {planActivo !== p.plan && (
+                    {planActivo!==p.plan && (
                       <div style={{ padding:'0 14px 12px' }}>
                         <button onClick={() => iniciarPago(p.plan)} disabled={iniciandoPago}
                           style={{ width:'100%', padding:'9px', background: iniciandoPago ? '#A8C4B8' : p.destacado ? '#0A9E6E' : '#063D2A', color:'#fff', border:'none', borderRadius:8, fontSize:12, fontWeight:700, cursor: iniciandoPago ? 'not-allowed' : 'pointer' }}>
@@ -593,11 +570,10 @@ export default function Ajustes() {
                   <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16' }}>Sincronizar con Google Calendar</div>
                   <div style={{ fontSize:11.5, color:'#6B9080' }}>Las reservas aparecerán automáticamente en tu calendario</div>
                 </div>
-                {googleConectado ? (
-                  <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#E8F7F2', color:'#063D2A', flexShrink:0 }}>● Conectado</span>
-                ) : (
-                  <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#F1F5F9', color:'#6B9080', flexShrink:0 }}>○ Desconectado</span>
-                )}
+                {googleConectado
+                  ? <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#E8F7F2', color:'#063D2A', flexShrink:0 }}>● Conectado</span>
+                  : <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#F1F5F9', color:'#6B9080', flexShrink:0 }}>○ Desconectado</span>
+                }
               </div>
               {!googleConectado ? (
                 <button onClick={async () => {
@@ -609,7 +585,6 @@ export default function Ajustes() {
                     setGoogleMsg('✓ Conectado correctamente');
                     setTimeout(() => setGoogleMsg(''), 3000);
                   } catch (err) {
-                    console.error('Error Google Calendar:', err);
                     setGoogleMsg('Error: ' + (err?.message || err?.type || JSON.stringify(err) || 'desconocido'));
                   }
                   setGoogleCargando(false);
@@ -643,8 +618,7 @@ export default function Ajustes() {
                     setGoogleConectado(false);
                     setGoogleMsg('Desconectado de Google Calendar');
                     setTimeout(() => setGoogleMsg(''), 3000);
-                  }}
-                    style={{ width:'100%', padding:'8px', background:'transparent', color:'#EF4444', border:'1px solid #FECACA', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                  }} style={{ width:'100%', padding:'8px', background:'transparent', color:'#EF4444', border:'1px solid #FECACA', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer' }}>
                     Desconectar Google Calendar
                   </button>
                 </div>
