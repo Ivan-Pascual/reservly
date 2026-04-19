@@ -47,6 +47,34 @@ const PLANES = [
   },
 ];
 
+// ── Fuera del componente para evitar pérdida de foco ──
+const Section = ({ title, children }) => (
+  <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden', marginBottom:16 }}>
+    <div style={{ padding:'16px 20px', borderBottom:'1px solid #EAF5EF', fontSize:14, fontWeight:700, color:'#0B1E16' }}>{title}</div>
+    <div style={{ padding:'0 20px' }}>{children}</div>
+  </div>
+);
+
+const Row = ({ title, desc, children }) => (
+  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:'1px solid #EAF5EF', gap:16 }}>
+    <div style={{ flex:1, minWidth:0 }}>
+      <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>{title}</div>
+      {desc && <div style={{ fontSize:11.5, color:'#6B9080', marginTop:2 }}>{desc}</div>}
+    </div>
+    {children}
+  </div>
+);
+
+const SelectRow = ({ label, value, onChange, options }) => (
+  <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
+    <div style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:6 }}>{label}</div>
+    <select value={value} onChange={e => onChange(e.target.value)}
+      style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', background:'#F4FAF7' }}>
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  </div>
+);
+
 export default function Ajustes() {
   const { negocio, loading: negocioLoading } = useNegocio();
   const isMobile = useIsMobile();
@@ -208,33 +236,6 @@ export default function Ajustes() {
     outline:'none', background:'#F4FAF7',
   };
 
-  const Section = ({ title, children }) => (
-    <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden', marginBottom:16 }}>
-      <div style={{ padding:'16px 20px', borderBottom:'1px solid #EAF5EF', fontSize:14, fontWeight:700, color:'#0B1E16' }}>{title}</div>
-      <div style={{ padding:'0 20px' }}>{children}</div>
-    </div>
-  );
-
-  const Row = ({ title, desc, children }) => (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:'1px solid #EAF5EF', gap:16 }}>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>{title}</div>
-        {desc && <div style={{ fontSize:11.5, color:'#6B9080', marginTop:2 }}>{desc}</div>}
-      </div>
-      {children}
-    </div>
-  );
-
-  const SelectRow = ({ label, value, onChange, options }) => (
-    <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
-      <div style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:6 }}>{label}</div>
-      <select value={value} onChange={e => onChange(e.target.value)}
-        style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, fontFamily:'DM Sans, sans-serif', background:'#F4FAF7' }}>
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  );
-
   if (loading || negocioLoading) return (
     <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
@@ -245,6 +246,7 @@ export default function Ajustes() {
 
   const planLabel = {
     trial:   `Prueba gratuita · ${diasRestantes} días restantes`,
+    solo:    'Plan Solo · Activo',
     basico:  'Plan Básico · Activo',
     pro:     'Plan Pro · Activo',
     agencia: 'Plan Agencia · Activo',
@@ -307,16 +309,22 @@ export default function Ajustes() {
                 {f.prefix ? (
                   <div style={{ display:'flex', border:'1.5px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
                     <span style={{ padding:'8px 10px', background:'#EAF5EF', fontSize:11, color:'#6B9080', borderRight:'1px solid #D6EDE5', whiteSpace:'nowrap' }}>{f.prefix}</span>
-                    <input value={info[f.key]} onChange={e => setInfo({...info, [f.key]:e.target.value})}
-                      onBlur={() => setInfo(p => ({...p, slug: slugificar(p.slug)}))}
-                      style={{ flex:1, padding:'8px 10px', border:'none', outline:'none', fontSize:13, fontFamily:'DM Mono, monospace', background:'#F4FAF7', minWidth:0 }}/>
+                    <input
+                      value={info[f.key]}
+                      onChange={e => setInfo(p => ({ ...p, [f.key]: e.target.value }))}
+                      onBlur={() => setInfo(p => ({ ...p, slug: slugificar(p.slug) }))}
+                      style={{ flex:1, padding:'8px 10px', border:'none', outline:'none', fontSize:13, fontFamily:'DM Mono, monospace', background:'#F4FAF7', minWidth:0 }}
+                    />
                   </div>
                 ) : (
-                  <input value={info[f.key]} onChange={e => setInfo({...info, [f.key]:e.target.value})}
+                  <input
+                    value={info[f.key]}
+                    onChange={e => setInfo(p => ({ ...p, [f.key]: e.target.value }))}
                     type={f.type || 'text'}
                     style={{ ...inputStyle, fontFamily: f.mono ? 'DM Mono, monospace' : 'DM Sans, sans-serif' }}
                     onFocus={e => e.target.style.borderColor='#0A9E6E'}
-                    onBlur={e => e.target.style.borderColor='#D6EDE5'}/>
+                    onBlur={e => e.target.style.borderColor='#D6EDE5'}
+                  />
                 )}
               </div>
             ))}
@@ -363,17 +371,20 @@ export default function Ajustes() {
           <Section title="Horario de apertura">
             <div style={{ padding:'8px 0' }}>
               {[
-                { key:'lunes', label:'Lunes' }, { key:'martes', label:'Martes' },
-                { key:'miercoles', label:'Miércoles' }, { key:'jueves', label:'Jueves' },
-                { key:'viernes', label:'Viernes' }, { key:'sabado', label:'Sábado' },
-                { key:'domingo', label:'Domingo' },
+                { key:'lunes',     label:'Lunes'      },
+                { key:'martes',    label:'Martes'     },
+                { key:'miercoles', label:'Miércoles'  },
+                { key:'jueves',    label:'Jueves'     },
+                { key:'viernes',   label:'Viernes'    },
+                { key:'sabado',    label:'Sábado'     },
+                { key:'domingo',   label:'Domingo'    },
               ].map((dia, i, arr) => {
                 const h = horario[dia.key];
                 return (
                   <div key={dia.key} style={{ padding:'10px 0', borderBottom: i<arr.length-1 ? '1px solid #EAF5EF' : 'none' }}>
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 44px', gap:10, alignItems:'center', marginBottom: h.activo ? 8 : 0 }}>
                       <div style={{ fontSize:13, fontWeight:600, color: h.activo ? '#0B1E16' : '#A8C4B8' }}>{dia.label}</div>
-                      <div onClick={() => setHorario(p => ({...p, [dia.key]:{...p[dia.key], activo:!p[dia.key].activo}}))}
+                      <div onClick={() => setHorario(p => ({ ...p, [dia.key]:{ ...p[dia.key], activo:!p[dia.key].activo } }))}
                         style={{ width:40, height:22, borderRadius:11, background: h.activo ? '#0A9E6E' : '#D6EDE5', position:'relative', cursor:'pointer', transition:'background 0.2s' }}>
                         <div style={{ position:'absolute', width:16, height:16, borderRadius:'50%', background:'#fff', top:3, left: h.activo ? 21 : 3, transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.2)' }}/>
                       </div>
@@ -381,11 +392,11 @@ export default function Ajustes() {
                     {h.activo ? (
                       <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                         <input type="time" value={h.apertura}
-                          onChange={e => setHorario(p => ({...p, [dia.key]:{...p[dia.key], apertura:e.target.value}}))}
+                          onChange={e => setHorario(p => ({ ...p, [dia.key]:{ ...p[dia.key], apertura:e.target.value } }))}
                           style={{ flex:1, minWidth:90, padding:'5px 8px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:12.5, fontFamily:'DM Mono, monospace', outline:'none', background:'#F4FAF7' }}/>
                         <span style={{ fontSize:12, color:'#A8C4B8' }}>—</span>
                         <input type="time" value={h.cierre}
-                          onChange={e => setHorario(p => ({...p, [dia.key]:{...p[dia.key], cierre:e.target.value}}))}
+                          onChange={e => setHorario(p => ({ ...p, [dia.key]:{ ...p[dia.key], cierre:e.target.value } }))}
                           style={{ flex:1, minWidth:90, padding:'5px 8px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:12.5, fontFamily:'DM Mono, monospace', outline:'none', background:'#F4FAF7' }}/>
                       </div>
                     ) : (
@@ -401,8 +412,6 @@ export default function Ajustes() {
           {/* Plan y suscripción */}
           <Section title="Plan y suscripción">
             <div style={{ padding:'14px 0' }}>
-
-              {/* Plan actual */}
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, padding:'12px 14px', background:'#F4FAF7', borderRadius:10, flexWrap:'wrap', gap:8 }}>
                 <div>
                   <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16' }}>{planLabel}</div>
@@ -411,7 +420,6 @@ export default function Ajustes() {
                 <span style={{ fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:'#E8F7F2', color:'#063D2A' }}>● Activo</span>
               </div>
 
-              {/* Tres planes */}
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {PLANES.map(p => (
                   <div key={p.plan} style={{
@@ -456,7 +464,6 @@ export default function Ajustes() {
                   </div>
                 ))}
               </div>
-
               <div style={{ fontSize:11.5, color:'#A8C4B8', marginTop:12, textAlign:'center' }}>
                 Sin permanencia · Cancela cuando quieras · Pago seguro con Stripe
               </div>
@@ -526,7 +533,7 @@ export default function Ajustes() {
             </Row>
             {cfg.recordatorio && (
               <SelectRow label="Enviar recordatorio" value={cfg.recordatorio_horas}
-                onChange={v => setCfg(p => ({...p, recordatorio_horas:parseInt(v)}))}
+                onChange={v => setCfg(p => ({ ...p, recordatorio_horas:parseInt(v) }))}
                 options={[
                   { value:1, label:'1 hora antes' }, { value:2, label:'2 horas antes' },
                   { value:24, label:'24 horas antes' }, { value:48, label:'48 horas antes' },
@@ -544,7 +551,7 @@ export default function Ajustes() {
             </Row>
             {cfg.cancelacion && (
               <SelectRow label="Permitir cancelar hasta" value={cfg.cancelacion_horas}
-                onChange={v => setCfg(p => ({...p, cancelacion_horas:parseInt(v)}))}
+                onChange={v => setCfg(p => ({ ...p, cancelacion_horas:parseInt(v) }))}
                 options={[
                   { value:1, label:'1 hora antes' }, { value:2, label:'2 horas antes' },
                   { value:6, label:'6 horas antes' }, { value:24, label:'24 horas antes' },
@@ -557,7 +564,7 @@ export default function Ajustes() {
               <div style={{ padding:'12px 0', borderBottom:'1px solid #EAF5EF' }}>
                 <div style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:6 }}>Importe de la señal (EUR)</div>
                 <input type="number" value={cfg.senal_importe}
-                  onChange={e => setCfg(p => ({...p, senal_importe:parseFloat(e.target.value)}))}
+                  onChange={e => setCfg(p => ({ ...p, senal_importe:parseFloat(e.target.value) }))}
                   style={{ ...inputStyle, fontFamily:'DM Mono, monospace' }}/>
               </div>
             )}
@@ -569,7 +576,7 @@ export default function Ajustes() {
             </Row>
             {cfg.retencion && (
               <SelectRow label="Enviar recordatorio a las" value={cfg.retencion_semanas}
-                onChange={v => setCfg(p => ({...p, retencion_semanas:parseInt(v)}))}
+                onChange={v => setCfg(p => ({ ...p, retencion_semanas:parseInt(v) }))}
                 options={[
                   { value:3, label:'3 semanas sin visita' }, { value:4, label:'4 semanas sin visita' },
                   { value:6, label:'6 semanas sin visita' }, { value:8, label:'8 semanas sin visita' },
