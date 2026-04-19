@@ -97,10 +97,14 @@ export default function Dashboard() {
       supabase.from('tpv').select('importe').eq('negocio_id', negocio.id)
         .gte('created_at', inicioMes + 'T00:00:00'),
       supabase.from('tpv').select('importe').eq('negocio_id', negocio.id),
+      // Excluye canceladas
       supabase.from('reservas').select('*', { count:'exact', head:true })
-        .eq('negocio_id', negocio.id).eq('fecha', hoy),
+        .eq('negocio_id', negocio.id).eq('fecha', hoy)
+        .not('estado', 'eq', 'cancelada'),
+      // Excluye canceladas
       supabase.from('reservas').select('*', { count:'exact', head:true })
-        .eq('negocio_id', negocio.id).gte('fecha', inicioMes),
+        .eq('negocio_id', negocio.id).gte('fecha', inicioMes)
+        .not('estado', 'eq', 'cancelada'),
       supabase.from('reservas').select('*', { count:'exact', head:true })
         .eq('negocio_id', negocio.id).eq('estado', 'cancelada').eq('fecha', hoy),
       supabase.from('reservas').select('*', { count:'exact', head:true })
@@ -215,43 +219,41 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
-{/* Banner trial */}
-{negocio?.plan === 'trial' && (() => {
-  const expiry = negocio?.plan_expiry ? new Date(negocio.plan_expiry) : null;
-  const dias = expiry ? Math.max(0, Math.ceil((expiry - new Date()) / (1000*60*60*24))) : 30;
-  if (dias > 7) return null;
-  return (
-    <div style={{ background: dias <= 3 ? '#FEF2F2' : '#FFF8E7', borderBottom:`1px solid ${dias <= 3 ? '#FECACA' : '#F5E4A0'}`, padding:'10px 24px', display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-      <span style={{ fontSize:16 }}>{dias <= 3 ? '⚠️' : '⏰'}</span>
-      <div style={{ flex:1 }}>
-        <span style={{ fontSize:13, fontWeight:600, color: dias <= 3 ? '#991B1B' : '#92400E' }}>
-          {dias === 0
-            ? 'Tu periodo de prueba ha expirado.'
-            : `Tu periodo de prueba termina en ${dias} ${dias === 1 ? 'día' : 'días'}.`}
-        </span>
-        <span style={{ fontSize:13, color: dias <= 3 ? '#B91C1C' : '#92400E', marginLeft:6 }}>
-          Elige un plan para no perder el acceso.
-        </span>
-      </div>
-      <button onClick={() => navigate('/ajustes')}
-        style={{ background: dias <= 3 ? '#EF4444' : '#F59E0B', color:'#fff', border:'none', padding:'6px 16px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
-        Ver planes →
-      </button>
-    </div>
-  );
-})()}
+
+      {/* Banner trial */}
+      {negocio?.plan === 'trial' && (() => {
+        const expiry = negocio?.plan_expiry ? new Date(negocio.plan_expiry) : null;
+        const dias = expiry ? Math.max(0, Math.ceil((expiry - new Date()) / (1000*60*60*24))) : 30;
+        if (dias > 7) return null;
+        return (
+          <div style={{ background: dias <= 3 ? '#FEF2F2' : '#FFF8E7', borderBottom:`1px solid ${dias <= 3 ? '#FECACA' : '#F5E4A0'}`, padding:'10px 24px', display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+            <span style={{ fontSize:16 }}>{dias <= 3 ? '⚠️' : '⏰'}</span>
+            <div style={{ flex:1 }}>
+              <span style={{ fontSize:13, fontWeight:600, color: dias <= 3 ? '#991B1B' : '#92400E' }}>
+                {dias === 0 ? 'Tu periodo de prueba ha expirado.' : `Tu periodo de prueba termina en ${dias} ${dias === 1 ? 'día' : 'días'}.`}
+              </span>
+              <span style={{ fontSize:13, color: dias <= 3 ? '#B91C1C' : '#92400E', marginLeft:6 }}>
+                Elige un plan para no perder el acceso.
+              </span>
+            </div>
+            <button onClick={() => navigate('/ajustes')}
+              style={{ background: dias <= 3 ? '#EF4444' : '#F59E0B', color:'#fff', border:'none', padding:'6px 16px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+              Ver planes →
+            </button>
+          </div>
+        );
+      })()}
+
       {/* Banner pago exitoso */}
       {pagoExitoso && (
         <div style={{ background:'#063D2A', padding:'14px 24px', display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
           <div style={{ width:10, height:10, borderRadius:'50%', background:'#0A9E6E', flexShrink:0, boxShadow:'0 0 0 3px rgba(10,158,110,0.3)' }}/>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>¡Plan Solo activado correctamente!</div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>¡Plan activado correctamente!</div>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)' }}>Recibirás la confirmación por email. Ya tienes acceso a todas las funciones.</div>
           </div>
           <button onClick={() => setPagoExitoso(false)}
-            style={{ background:'transparent', border:'none', color:'rgba(255,255,255,0.5)', fontSize:18, cursor:'pointer', padding:'0 4px' }}>
-            ✕
-          </button>
+            style={{ background:'transparent', border:'none', color:'rgba(255,255,255,0.5)', fontSize:18, cursor:'pointer', padding:'0 4px' }}>✕</button>
         </div>
       )}
 
@@ -277,7 +279,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Recordatorios próximas 2h */}
+        {/* Próximas 2h */}
         {proximasCitas.length > 0 && (
           <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:12, padding:'14px 18px' }}>
             <div style={{ fontSize:12, fontWeight:700, color:'#92400E', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}>
@@ -335,13 +337,14 @@ export default function Dashboard() {
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:10 }}>
             {[
               { label:'Citas hoy',  value: stats.hoy,        featured:true },
-              { label:'Este mes',   value: stats.mes                        },
-              { label:'Pendientes', value: stats.pendientes                 },
-              { label:'Canceladas', value: stats.canceladas                 },
+              { label:'Este mes',   value: stats.mes,         note:'excl. canceladas' },
+              { label:'Pendientes', value: stats.pendientes   },
+              { label:'Canceladas', value: stats.canceladas   },
             ].map(s => (
               <div key={s.label} style={{ background: s.featured ? '#063D2A' : '#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
                 <div style={{ fontSize:11, fontWeight:600, color: s.featured ? '#ffffff60' : '#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:8 }}>{s.label}</div>
                 <div style={{ fontSize:28, fontWeight:700, color: s.featured ? '#fff' : '#0B1E16', fontFamily:'DM Mono, monospace', lineHeight:1 }}>{s.value}</div>
+                {s.note && <div style={{ fontSize:10, color:'#A8C4B8', marginTop:4 }}>{s.note}</div>}
               </div>
             ))}
           </div>
@@ -416,7 +419,6 @@ export default function Dashboard() {
           {!isMobile && (
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
-              {/* Empleados activos */}
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:16 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12 }}>
                   Empleados activos
@@ -436,7 +438,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Bloc de notas */}
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:16 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:12 }}>
                   📝 Notas internas
@@ -475,7 +476,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Accesos rápidos */}
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:16 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>
                   Accesos rápidos
@@ -496,7 +496,6 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-
             </div>
           )}
 
@@ -517,7 +516,6 @@ export default function Dashboard() {
               ))}
             </div>
           )}
-
         </div>
       </div>
     </div>

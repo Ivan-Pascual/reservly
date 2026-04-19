@@ -211,6 +211,8 @@ export default function App() {
                   <Route path="/pago/exito"          element={<PagoExito />} />
                   <Route path="/pago/cancelado"      element={<PagoCancelado />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
+                  <Route path="/widget"        element={<Navigate to="/ajustes" replace />} />
+                  <Route path="/integraciones" element={<Navigate to="/ajustes" replace />} />
                   <Route path="*"                    element={<NotFound />} />
                 </Routes>
               </Layout>
