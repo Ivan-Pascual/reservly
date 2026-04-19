@@ -10,8 +10,7 @@ export default function QRImprimible() {
 
   useEffect(() => {
     if (!negocio?.slug) return;
-    const url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(urlReserva)}&bgcolor=ffffff&color=063D2A&margin=10`;
-    setQrUrl(url);
+const url = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${urlReserva}&bgcolor=ffffff&color=063D2A&margin=10`;    setQrUrl(url);
   }, [negocio, urlReserva]);
 
   const imprimir = () => window.print();
