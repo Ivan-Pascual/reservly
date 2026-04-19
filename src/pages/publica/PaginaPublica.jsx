@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { notificaciones } from '../../services/notificaciones';
 import { pushNotifications } from '../../services/notificacionesPush';
+import { googleCalendar } from '../../services/googleCalendar';
 
 const TEXTOS = {
   es: {
@@ -227,7 +228,25 @@ export default function PaginaPublica() {
         const { data: servicioData } = await supabase.from('servicios').select('nombre').eq('id', selServicio.id).single();
         notificaciones.confirmarReserva({ cliente:{ nombre:datosCliente.nombre, email:datosCliente.email }, negocio, reserva:{ fecha:fechaStr, hora_inicio:selHora.hora }, servicio:servicioData, empleado:selEmpleado });
       }
-      pushNotifications.nuevaReserva({ clienteNombre:datosCliente.nombre, servicio:selServicio?.nombre||'Servicio', fecha:fechaStr, hora:selHora.hora });
+   pushNotifications.nuevaReserva({ clienteNombre:datosCliente.nombre, servicio:selServicio?.nombre||'Servicio', fecha:fechaStr, hora:selHora.hora });
+
+      // Google Calendar automático
+      try {
+        const token = googleCalendar.getToken();
+        if (token) {
+          await googleCalendar.crearEvento({
+            cliente:     datosCliente.nombre,
+            servicio:    selServicio?.nombre || 'Servicio',
+            empleado:    selEmpleado?.nombre || '',
+            fecha:       fechaStr,
+            hora_inicio: selHora.hora,
+            hora_fin:    selHora.horaFin,
+          });
+        }
+      } catch (e) {
+        console.warn('Google Calendar sync:', e);
+      }
+
       setRespuestasForm({});
       setPaso(6);
     } catch (err) {
