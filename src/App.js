@@ -35,6 +35,7 @@ import Demo from './pages/demo/Demo';
 import Fidelizacion from './pages/fidelizacion/Fidelizacion';
 import QRImprimible from './pages/qr/QRImprimible';
 import Precios from './pages/landing/Precios';
+import Comparativa from './pages/landing/Comparativa';
 
 const TITULOS = {
   '/':             { title:'Reservly — Gestión de reservas para negocios locales', canonical:'https://getreservly.com' },
@@ -211,6 +212,7 @@ export default function App() {
                   <Route path="/pago/exito"          element={<PagoExito />} />
                   <Route path="/pago/cancelado"      element={<PagoCancelado />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
+                  <Route path="/comparativa" element={<Comparativa />} />
                   <Route path="/widget"        element={<Navigate to="/ajustes" replace />} />
                   <Route path="/integraciones" element={<Navigate to="/ajustes" replace />} />
                   <Route path="*"                    element={<NotFound />} />
