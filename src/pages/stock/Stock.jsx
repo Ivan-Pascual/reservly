@@ -30,7 +30,7 @@ export default function Stock() {
   useEffect(() => {
     if (!negocio) return;
     fetchProductos();
-  }, [negocio]);
+  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchProductos = async () => {
     const { data } = await supabase
@@ -93,31 +93,24 @@ export default function Stock() {
     if (!ajuste.cantidad || ajuste.cantidad <= 0) return;
     const producto = productos.find(p => p.id === productoId);
     if (!producto) return;
-
     let nuevoStock = producto.stock_actual;
     if (ajuste.tipo === 'entrada') nuevoStock += parseInt(ajuste.cantidad);
     else if (ajuste.tipo === 'salida') nuevoStock -= parseInt(ajuste.cantidad);
     else nuevoStock = parseInt(ajuste.cantidad);
-
     if (nuevoStock < 0) nuevoStock = 0;
-
     await Promise.all([
       supabase.from('productos').update({ stock_actual: nuevoStock }).eq('id', productoId),
       supabase.from('stock_movimientos').insert({
-        producto_id: productoId,
-        negocio_id:  negocio.id,
-        tipo:        ajuste.tipo,
-        cantidad:    parseInt(ajuste.cantidad),
-        motivo:      ajuste.motivo || null,
+        producto_id: productoId, negocio_id: negocio.id,
+        tipo: ajuste.tipo, cantidad: parseInt(ajuste.cantidad),
+        motivo: ajuste.motivo || null,
       }),
     ]);
-
     setShowAjuste(null);
     setAjuste({ tipo:'entrada', cantidad:1, motivo:'' });
     fetchProductos();
   };
 
-  // Pistola de código de barras — busca producto por código
   const activarEscanerBusqueda = () => {
     setEscaneando(true);
     setTimeout(() => buscadorRef.current?.focus(), 100);
@@ -127,11 +120,8 @@ export default function Stock() {
     if (e.key === 'Enter') {
       const codigo = e.target.value.trim();
       const producto = productos.find(p => p.codigo_barras === codigo);
-      if (producto) {
-        setBusqueda(producto.nombre);
-      } else {
-        setBusqueda(codigo);
-      }
+      if (producto) setBusqueda(producto.nombre);
+      else setBusqueda(codigo);
       setEscaneando(false);
     }
   };
@@ -143,7 +133,7 @@ export default function Stock() {
                    (p.codigo_barras || '').includes(busqueda);
     const matchC = filtroCategoria === 'todos' || p.categoria === filtroCategoria;
     const matchS = filtroStock === 'todos' ||
-                   (filtroStock === 'bajo' && p.stock_actual <= p.stock_minimo) ||
+                   (filtroStock === 'bajo' && p.stock_actual <= p.stock_minimo && p.stock_actual > 0) ||
                    (filtroStock === 'ok'   && p.stock_actual > p.stock_minimo) ||
                    (filtroStock === 'cero' && p.stock_actual === 0);
     return matchB && matchC && matchS;
@@ -162,9 +152,22 @@ export default function Stock() {
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
 
+      {/* Topbar */}
       <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:12 }}>
         <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Stock</div>
         <div style={{ marginLeft:'auto', display:'flex', gap:8 }}>
+          {productos.length > 0 && !isMobile && (
+            <>
+              <button onClick={() => exportarExcel.stock(productos, negocio?.nombre)}
+                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+                📊 Excel
+              </button>
+              <button onClick={() => exportarPDF.stock(productos, negocio?.nombre)}
+                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
+                📄 PDF
+              </button>
+            </>
+          )}
           <button onClick={activarEscanerBusqueda}
             style={{ background:'#F4FAF7', color:'#0A9E6E', border:'1px solid #D6EDE5', padding:'7px 14px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
             📷 Escanear
@@ -175,34 +178,27 @@ export default function Stock() {
           </button>
         </div>
       </div>
-<div style={{ display:'flex', gap:6 }}>
-  <button onClick={() => exportarExcel.stock(productos, negocio?.nombre)}
-    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-    📊 Excel
-  </button>
-  <button onClick={() => exportarPDF.stock(productos, negocio?.nombre)}
-    style={{ padding:'7px 12px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-    📄 PDF
-  </button>
-</div>
+
       <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:16 }}>
 
-        {/* Stats */}
-        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:10 }}>
-          {[
-            { label:'Productos',    value: productos.length },
-            { label:'Stock bajo',   value: stockBajo,  warning: stockBajo > 0 },
-            { label:'Sin stock',    value: stockCero,  danger:  stockCero > 0 },
-            { label:'Valor stock',  value: productos.reduce((a, p) => a + (p.precio_coste||0) * p.stock_actual, 0).toFixed(0) + ' EUR' },
-          ].map(s => (
-            <div key={s.label} style={{ background:'#fff', border: s.danger ? '1px solid #FECACA' : s.warning ? '1px solid #F5E4A0' : '1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
-              <div style={{ fontSize:11, color:'#6B9080', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:6 }}>{s.label}</div>
-              <div style={{ fontSize:22, fontWeight:700, color: s.danger ? '#EF4444' : s.warning ? '#F59E0B' : '#0B1E16', fontFamily:'DM Mono, monospace' }}>{s.value}</div>
-            </div>
-          ))}
-        </div>
+        {/* Stats — solo si hay productos */}
+        {productos.length > 0 && (
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:10 }}>
+            {[
+              { label:'Productos',   value: productos.length },
+              { label:'Stock bajo',  value: stockBajo, warning: stockBajo > 0 },
+              { label:'Sin stock',   value: stockCero, danger:  stockCero > 0 },
+              { label:'Valor stock', value: productos.reduce((a, p) => a + (p.precio_coste||0) * p.stock_actual, 0).toFixed(0) + ' EUR' },
+            ].map(s => (
+              <div key={s.label} style={{ background:'#fff', border: s.danger ? '1px solid #FECACA' : s.warning ? '1px solid #F5E4A0' : '1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
+                <div style={{ fontSize:11, color:'#6B9080', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:6 }}>{s.label}</div>
+                <div style={{ fontSize:22, fontWeight:700, color: s.danger ? '#EF4444' : s.warning ? '#F59E0B' : '#0B1E16', fontFamily:'DM Mono, monospace' }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
-        {/* Input oculto para pistola en modo búsqueda */}
+        {/* Escáner */}
         {escaneando && (
           <div style={{ background:'#E8F7F2', border:'1.5px solid #0A9E6E', borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
             <span style={{ fontSize:18 }}>📷</span>
@@ -217,7 +213,7 @@ export default function Stock() {
           </div>
         )}
 
-        {/* Form nuevo / editar */}
+        {/* Form */}
         {showForm && (
           <div style={{ background:'#fff', border:'1.5px solid #0A9E6E', borderRadius:14, padding: isMobile ? 16 : 24 }}>
             <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16', marginBottom:16 }}>
@@ -245,28 +241,22 @@ export default function Stock() {
               <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:10 }}>
                 <div>
                   <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Precio venta (EUR)</div>
-                  <input type="number" value={form.precio_venta}
-                    onChange={e=>setForm({...form, precio_venta:e.target.value})}
-                    placeholder="0.00"
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
+                  <input type="number" value={form.precio_venta} onChange={e=>setForm({...form, precio_venta:e.target.value})}
+                    placeholder="0.00" style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
                 </div>
                 <div>
                   <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Precio coste (EUR)</div>
-                  <input type="number" value={form.precio_coste}
-                    onChange={e=>setForm({...form, precio_coste:e.target.value})}
-                    placeholder="0.00"
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
+                  <input type="number" value={form.precio_coste} onChange={e=>setForm({...form, precio_coste:e.target.value})}
+                    placeholder="0.00" style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
                 </div>
                 <div>
                   <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Stock actual</div>
-                  <input type="number" value={form.stock_actual}
-                    onChange={e=>setForm({...form, stock_actual:e.target.value})}
+                  <input type="number" value={form.stock_actual} onChange={e=>setForm({...form, stock_actual:e.target.value})}
                     style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
                 </div>
                 <div>
                   <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Stock mínimo</div>
-                  <input type="number" value={form.stock_minimo}
-                    onChange={e=>setForm({...form, stock_minimo:e.target.value})}
+                  <input type="number" value={form.stock_minimo} onChange={e=>setForm({...form, stock_minimo:e.target.value})}
                     style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
                 </div>
               </div>
@@ -290,51 +280,52 @@ export default function Stock() {
           </div>
         )}
 
-        {/* Filtros */}
-        <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:8, flexWrap:'wrap' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, padding:'7px 14px', flex: isMobile ? 'auto' : 1 }}>
-            <span style={{ color:'#A8C4B8' }}>🔍</span>
-            <input value={busqueda} onChange={e=>setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre o código de barras..."
-              style={{ border:'none', outline:'none', fontSize:13, color:'#0B1E16', background:'transparent', width:'100%' }}/>
-          </div>
-          <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
-            {[
-              { k:'todos', label:'Todo el stock' },
-              { k:'bajo',  label:'Stock bajo'    },
-              { k:'cero',  label:'Sin stock'      },
-              { k:'ok',    label:'Stock OK'       },
-            ].map(f => (
-              <button key={f.k} onClick={() => setFiltroStock(f.k)} style={{
-                padding:'7px 12px', fontSize:12, fontWeight:500,
-                color: filtroStock===f.k ? '#fff' : '#6B9080',
-                background: filtroStock===f.k ? '#0A9E6E' : 'transparent',
-                border:'none', borderRight:'1px solid #D6EDE5', cursor:'pointer',
-                whiteSpace:'nowrap',
-              }}>{f.label}</button>
-            ))}
-          </div>
-          {categorias.length > 1 && (
-            <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', flexWrap:'wrap' }}>
-              {categorias.map(c => (
-                <button key={c} onClick={() => setFiltroCategoria(c)} style={{
+        {/* Filtros — solo si hay productos */}
+        {productos.length > 0 && (
+          <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:8, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, padding:'7px 14px', flex: isMobile ? 'auto' : 1 }}>
+              <span style={{ color:'#A8C4B8' }}>🔍</span>
+              <input value={busqueda} onChange={e=>setBusqueda(e.target.value)}
+                placeholder="Buscar por nombre o código de barras..."
+                style={{ border:'none', outline:'none', fontSize:13, color:'#0B1E16', background:'transparent', width:'100%' }}/>
+            </div>
+            <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
+              {[
+                { k:'todos', label:'Todo'       },
+                { k:'bajo',  label:'Stock bajo' },
+                { k:'cero',  label:'Sin stock'  },
+                { k:'ok',    label:'Stock OK'   },
+              ].map(f => (
+                <button key={f.k} onClick={() => setFiltroStock(f.k)} style={{
                   padding:'7px 12px', fontSize:12, fontWeight:500,
-                  color: filtroCategoria===c ? '#fff' : '#6B9080',
-                  background: filtroCategoria===c ? '#0A9E6E' : 'transparent',
-                  border:'none', borderRight:'1px solid #D6EDE5', cursor:'pointer',
-                  textTransform:'capitalize', whiteSpace:'nowrap',
-                }}>{c === 'todos' ? 'Todas las categorías' : c}</button>
+                  color: filtroStock===f.k ? '#fff' : '#6B9080',
+                  background: filtroStock===f.k ? '#0A9E6E' : 'transparent',
+                  border:'none', borderRight:'1px solid #D6EDE5', cursor:'pointer', whiteSpace:'nowrap',
+                }}>{f.label}</button>
               ))}
             </div>
-          )}
-        </div>
+            {categorias.length > 1 && (
+              <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', flexWrap:'wrap' }}>
+                {categorias.map(c => (
+                  <button key={c} onClick={() => setFiltroCategoria(c)} style={{
+                    padding:'7px 12px', fontSize:12, fontWeight:500,
+                    color: filtroCategoria===c ? '#fff' : '#6B9080',
+                    background: filtroCategoria===c ? '#0A9E6E' : 'transparent',
+                    border:'none', borderRight:'1px solid #D6EDE5', cursor:'pointer',
+                    textTransform:'capitalize', whiteSpace:'nowrap',
+                  }}>{c === 'todos' ? 'Todas las categorías' : c}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Lista productos */}
         {productos.length > 0 ? (
           isMobile ? (
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {filtrados.map(p => {
-                const stockOk = p.stock_actual > p.stock_minimo;
+                const stockOk   = p.stock_actual > p.stock_minimo;
                 const stockCeroP = p.stock_actual === 0;
                 return (
                   <div key={p.id} style={{ background:'#fff', border: stockCeroP ? '1px solid #FECACA' : !stockOk ? '1px solid #F5E4A0' : '1px solid #EAF5EF', borderRadius:12, padding:14 }}>
@@ -344,9 +335,7 @@ export default function Stock() {
                         {p.stock_actual}
                       </div>
                     </div>
-                    {p.codigo_barras && (
-                      <div style={{ fontSize:11, color:'#A8C4B8', fontFamily:'DM Mono, monospace', marginBottom:4 }}>{p.codigo_barras}</div>
-                    )}
+                    {p.codigo_barras && <div style={{ fontSize:11, color:'#A8C4B8', fontFamily:'DM Mono, monospace', marginBottom:4 }}>{p.codigo_barras}</div>}
                     <div style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, color:'#6B9080', marginBottom:10 }}>
                       <span>{p.categoria || '—'}</span>
                       <span>{p.precio_venta ? `${p.precio_venta} EUR` : '—'}</span>
@@ -361,7 +350,6 @@ export default function Stock() {
                         Editar
                       </button>
                     </div>
-                    {/* Panel ajuste inline móvil */}
                     {showAjuste === p.id && (
                       <div style={{ marginTop:10, background:'#F4FAF7', borderRadius:10, padding:12 }}>
                         <div style={{ fontSize:12, fontWeight:600, color:'#0B1E16', marginBottom:8 }}>Ajuste de stock</div>
@@ -374,8 +362,7 @@ export default function Stock() {
                             }}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>
                           ))}
                         </div>
-                        <input type="number" value={ajuste.cantidad}
-                          onChange={e=>setAjuste({...ajuste, cantidad:e.target.value})}
+                        <input type="number" value={ajuste.cantidad} onChange={e=>setAjuste({...ajuste, cantidad:e.target.value})}
                           placeholder="Cantidad"
                           style={{ width:'100%', padding:'7px 10px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace', marginBottom:6 }}/>
                         <input value={ajuste.motivo} onChange={e=>setAjuste({...ajuste, motivo:e.target.value})}
@@ -396,9 +383,7 @@ export default function Stock() {
                   </div>
                 );
               })}
-              {filtrados.length === 0 && (
-                <div style={{ padding:40, textAlign:'center', color:'#A8C4B8', fontSize:14 }}>No hay productos que coincidan</div>
-              )}
+              {filtrados.length === 0 && <div style={{ padding:40, textAlign:'center', color:'#A8C4B8', fontSize:14 }}>No hay productos que coincidan</div>}
             </div>
           ) : (
             <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
@@ -407,8 +392,8 @@ export default function Stock() {
                   <div key={h} style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</div>
                 ))}
               </div>
-              {filtrados.map((p, i) => {
-                const stockOk = p.stock_actual > p.stock_minimo;
+              {filtrados.map((p) => {
+                const stockOk   = p.stock_actual > p.stock_minimo;
                 const stockCeroP = p.stock_actual === 0;
                 return (
                   <React.Fragment key={p.id}>
@@ -445,11 +430,12 @@ export default function Stock() {
                         </button>
                       </div>
                     </div>
-                    {/* Panel ajuste inline desktop */}
                     {showAjuste === p.id && (
                       <div style={{ padding:'14px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-                          <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>Ajuste de stock para <span style={{ color:'#0A9E6E' }}>{p.nombre}</span></div>
+                          <div style={{ fontSize:13, fontWeight:600, color:'#0B1E16' }}>
+                            Ajuste de stock para <span style={{ color:'#0A9E6E' }}>{p.nombre}</span>
+                          </div>
                           <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden' }}>
                             {['entrada','salida','ajuste'].map(t => (
                               <button key={t} onClick={() => setAjuste({...ajuste, tipo:t})} style={{
@@ -460,8 +446,7 @@ export default function Stock() {
                               }}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>
                             ))}
                           </div>
-                          <input type="number" value={ajuste.cantidad}
-                            onChange={e=>setAjuste({...ajuste, cantidad:e.target.value})}
+                          <input type="number" value={ajuste.cantidad} onChange={e=>setAjuste({...ajuste, cantidad:e.target.value})}
                             placeholder="Cantidad"
                             style={{ width:100, padding:'6px 10px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
                           <input value={ajuste.motivo} onChange={e=>setAjuste({...ajuste, motivo:e.target.value})}
@@ -481,23 +466,45 @@ export default function Stock() {
                   </React.Fragment>
                 );
               })}
-              {filtrados.length === 0 && (
-                <div style={{ padding:40, textAlign:'center', color:'#A8C4B8', fontSize:14 }}>No hay productos que coincidan</div>
-              )}
+              {filtrados.length === 0 && <div style={{ padding:40, textAlign:'center', color:'#A8C4B8', fontSize:14 }}>No hay productos que coincidan</div>}
             </div>
           )
         ) : (
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'60px 40px', textAlign:'center' }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>📦</div>
-            <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>Sin productos aún</div>
-            <div style={{ fontSize:13, color:'#6B9080', marginBottom:20 }}>Añade productos a tu stock para gestionarlos</div>
+          /* Empty state con guía de primeros pasos */
+          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'48px 40px', textAlign:'center', maxWidth:560, margin:'0 auto', width:'100%' }}>
+            <div style={{ fontSize:48, marginBottom:16 }}>📦</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0B1E16', marginBottom:8 }}>
+              Empieza a gestionar tu stock
+            </div>
+            <div style={{ fontSize:14, color:'#6B9080', lineHeight:1.7, marginBottom:28 }}>
+              Controla el inventario de productos que usas o vendes en tu negocio — champús, tintes, tratamientos, lo que sea.
+            </div>
+
+            {/* Pasos */}
+            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:28, textAlign:'left' }}>
+              {[
+                { n:'1', titulo:'Añade tus productos', desc:'Con nombre, precio y stock inicial. Puedes usar la pistola de códigos de barras.' },
+                { n:'2', titulo:'Define el stock mínimo', desc:'Te avisaremos cuando un producto esté por debajo del mínimo que fijes.' },
+                { n:'3', titulo:'Ajusta el stock', desc:'Cada vez que entren o salgan productos, regístralo para tener el inventario al día.' },
+              ].map(p => (
+                <div key={p.n} style={{ display:'flex', alignItems:'flex-start', gap:14, background:'#F4FAF7', borderRadius:10, padding:'12px 14px' }}>
+                  <div style={{ width:28, height:28, borderRadius:'50%', background:'#0A9E6E', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, flexShrink:0 }}>
+                    {p.n}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:2 }}>{p.titulo}</div>
+                    <div style={{ fontSize:12.5, color:'#6B9080', lineHeight:1.5 }}>{p.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <button onClick={() => setShowForm(true)}
-              style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'10px 24px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-              + Nuevo producto
+              style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'12px 28px', borderRadius:10, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+              + Añadir primer producto
             </button>
           </div>
         )}
-
       </div>
     </div>
   );
