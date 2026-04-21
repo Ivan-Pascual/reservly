@@ -1,492 +1,258 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import { useNegocio } from '../../hooks/useNegocio';
-import { useIsMobile } from '../../hooks/useIsMobile';
-import { exportarExcel, exportarPDF } from '../../services/exportar';
 
-const ESTADO_STYLES = {
-  confirmada: { bg:'#E8F7F2', color:'#063D2A', label:'Confirmada' },
-  pendiente:  { bg:'#FFF8E7', color:'#92400E', label:'Pendiente'  },
-  completada: { bg:'#F1F5F9', color:'#6B9080', label:'Completada' },
-  cancelada:  { bg:'#FEF2F2', color:'#EF4444', label:'Cancelada'  },
-};
-
-const POR_PAGINA = 20;
-
-const formVacio = {
-  cliente_id:'', empleado_id:'', servicio_id:'',
-  fecha: new Date().toISOString().split('T')[0],
-  hora_inicio:'09:00', hora_fin:'10:00',
-  estado:'confirmada', notas:'',
-};
-
-export default function Reservas() {
-  const { negocio } = useNegocio();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [reservas, setReservas] = useState([]);
-  const [clientes, setClientes] = useState([]);
-  const [empleados, setEmpleados] = useState([]);
-  const [servicios, setServicios] = useState([]);
-  const [filtro, setFiltro] = useState('todas');
-  const [busqueda, setBusqueda] = useState('');
-  const [fechaFiltro, setFechaFiltro] = useState('');
-  const [pagina, setPagina] = useState(1);
-  const [showForm, setShowForm] = useState(false);
-  const [editando, setEditando] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [clienteNuevo, setClienteNuevo] = useState({ nombre:'', telefono:'', email:'' });
-  const [modoCliente, setModoCliente] = useState('existente');
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState(formVacio);
+export default function DejarResena() {
+  const { slug, reservaId } = useParams();
+  const [estado, setEstado] = useState('cargando'); // cargando | formulario | enviada | error | yaResena
+  const [negocio, setNegocio] = useState(null);
+  const [reserva, setReserva] = useState(null);
+  const [puntuacion, setPuntuacion] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comentario, setComentario] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    if (!negocio) return;
-    fetchTodo();
-  }, [negocio]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchDatos();
+  }, [reservaId, slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchTodo = async () => {
-    const [resRes, cliRes, empRes, serRes] = await Promise.all([
-      supabase.from('reservas').select(`
-        *, clientes(nombre), empleados(nombre, color), servicios(nombre, duracion, precio)
-      `).eq('negocio_id', negocio.id).order('fecha', { ascending:false }).order('hora_inicio'),
-      supabase.from('clientes').select('id, nombre').eq('negocio_id', negocio.id),
-      supabase.from('empleados').select('id, nombre, color').eq('negocio_id', negocio.id).eq('activo', true),
-      supabase.from('servicios').select('id, nombre, duracion, precio').eq('negocio_id', negocio.id).eq('activo', true),
-    ]);
-    if (resRes.data) setReservas(resRes.data);
-    if (cliRes.data) setClientes(cliRes.data);
-    if (empRes.data) setEmpleados(empRes.data);
-    if (serRes.data) setServicios(serRes.data);
-    setLoading(false);
+  const fetchDatos = async () => {
+    // 1. Buscar negocio por slug
+    const { data: neg } = await supabase
+      .from('negocios').select('id, nombre, slug, direccion')
+      .eq('slug', slug).single();
+
+    if (!neg) { setEstado('error'); return; }
+    setNegocio(neg);
+
+    // 2. Buscar reserva con info del cliente y servicio
+    const { data: res } = await supabase
+      .from('reservas').select(`
+        id, fecha, hora_inicio, estado,
+        clientes(id, nombre),
+        servicios(nombre),
+        empleados(nombre)
+      `).eq('id', reservaId).eq('negocio_id', neg.id).single();
+
+    if (!res) { setEstado('error'); return; }
+    if (res.estado !== 'completada') { setEstado('error'); return; }
+    setReserva(res);
+
+    // 3. Comprobar si ya dejó reseña
+    const { data: resenaExistente } = await supabase
+      .from('resenas').select('id')
+      .eq('reserva_id', reservaId).single();
+
+    if (resenaExistente) { setEstado('yaResena'); return; }
+
+    setEstado('formulario');
   };
 
-  const abrirEdicion = (r) => {
-    setEditando(r.id);
-    setForm({
-      cliente_id:  r.cliente_id  || '',
-      empleado_id: r.empleado_id || '',
-      servicio_id: r.servicio_id || '',
-      fecha:       r.fecha,
-      hora_inicio: r.hora_inicio?.slice(0,5) || '09:00',
-      hora_fin:    r.hora_fin?.slice(0,5)    || '10:00',
-      estado:      r.estado,
-      notas:       r.notas || '',
-    });
-    setShowForm(true);
-  };
-
-  const cerrarForm = () => {
-    setShowForm(false);
-    setEditando(null);
-    setForm(formVacio);
-    setModoCliente('existente');
-    setClienteNuevo({ nombre:'', telefono:'', email:'' });
-  };
-
-  const guardarReserva = async () => {
-    if (modoCliente === 'existente' && !form.cliente_id) {
-      alert('Selecciona un cliente o crea uno nuevo.');
-      return;
+  const enviarResena = async () => {
+    if (puntuacion === 0) return;
+    setEnviando(true);
+    try {
+      await supabase.from('resenas').insert({
+        negocio_id:  negocio.id,
+        cliente_id:  reserva.clientes?.id || null,
+        reserva_id:  reservaId,
+        puntuacion,
+        comentario:  comentario.trim() || null,
+      });
+      setEstado('enviada');
+    } catch {
+      setEstado('error');
     }
-    if (modoCliente === 'nuevo' && !clienteNuevo.nombre.trim()) {
-      alert('El nombre del cliente es obligatorio.');
-      return;
-    }
-    if (!form.fecha || !form.hora_inicio) return;
-    setSaving(true);
-
-    let clienteId = form.cliente_id;
-
-    if (modoCliente === 'nuevo') {
-      const { data: nuevoCliente, error } = await supabase
-        .from('clientes').insert({
-          negocio_id: negocio.id,
-          nombre:     clienteNuevo.nombre.trim(),
-          telefono:   clienteNuevo.telefono.trim() || null,
-          email:      clienteNuevo.email.trim()    || null,
-          tag:        'nuevo',
-        }).select().single();
-      if (error || !nuevoCliente) {
-        alert('Error al crear el cliente.');
-        setSaving(false);
-        return;
-      }
-      clienteId = nuevoCliente.id;
-      setClientes(prev => [...prev, nuevoCliente]);
-    }
-
-    const payload = {
-      cliente_id:  clienteId        || null,
-      empleado_id: form.empleado_id || null,
-      servicio_id: form.servicio_id || null,
-      fecha:       form.fecha,
-      hora_inicio: form.hora_inicio,
-      hora_fin:    form.hora_fin,
-      estado:      form.estado,
-      notas:       form.notas || null,
-    };
-
-    if (editando) {
-      const reservaActual = reservas.find(r => r.id === editando);
-      if (reservaActual?.estado === 'completada') {
-        alert('No se puede editar una reserva ya completada.');
-        setSaving(false);
-        return;
-      }
-      await supabase.from('reservas').update(payload).eq('id', editando);
-    } else {
-      await supabase.from('reservas').insert({ ...payload, negocio_id: negocio.id });
-    }
-
-    cerrarForm();
-    fetchTodo();
-    setSaving(false);
+    setEnviando(false);
   };
 
-  const eliminarReserva = async (id) => {
-    if (!window.confirm('¿Cancelar esta reserva?')) return;
-    await supabase.from('reservas').update({ estado: 'cancelada' }).eq('id', id);
-    fetchTodo();
-  };
-
-  const filtradas = reservas.filter(r => {
-    const matchF = filtro === 'todas' || r.estado === filtro;
-    const matchB = (r.clientes?.nombre || '').toLowerCase().includes(busqueda.toLowerCase());
-    const matchD = !fechaFiltro || r.fecha === fechaFiltro;
-    return matchF && matchB && matchD;
-  });
-
-  const totalPaginas = Math.ceil(filtradas.length / POR_PAGINA);
-  const paginadas = filtradas.slice((pagina-1)*POR_PAGINA, pagina*POR_PAGINA);
-
-  const pad = isMobile ? 16 : 32;
-
-  if (loading) return (
-    <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ fontSize:14, color:'#6B9080' }}>Cargando...</div>
+  const Estrellas = ({ interactivo = false }) => (
+    <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
+      {[1,2,3,4,5].map(n => (
+        <div key={n}
+          onClick={() => interactivo && setPuntuacion(n)}
+          onMouseEnter={() => interactivo && setHover(n)}
+          onMouseLeave={() => interactivo && setHover(0)}
+          style={{ fontSize: interactivo ? 44 : 32, cursor: interactivo ? 'pointer' : 'default', transition:'transform 0.1s', transform: interactivo && (hover||puntuacion) >= n ? 'scale(1.15)' : 'scale(1)' }}>
+          {(interactivo ? (hover || puntuacion) : puntuacion) >= n ? '⭐' : '☆'}
+        </div>
+      ))}
     </div>
   );
 
-  return (
-    <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
+  const LABELS = ['', 'Muy malo', 'Malo', 'Normal', 'Bueno', '¡Excelente!'];
 
-      {/* Topbar */}
-      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:`0 ${pad}px`, height:60, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-        <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16' }}>Reservas</div>
-        <div style={{ marginLeft:'auto', display:'flex', gap:6, flexWrap:'wrap' }}>
-          {!isMobile && (
-            <>
-              <button onClick={() => exportarExcel.reservas(reservas, negocio?.nombre)}
-                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-                📊 Excel
-              </button>
-              <button onClick={() => exportarPDF.reservas(reservas, negocio?.nombre)}
-                style={{ padding:'7px 10px', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, fontSize:12, fontWeight:600, color:'#6B9080', cursor:'pointer' }}>
-                📄 PDF
-              </button>
-            </>
-          )}
-          <button onClick={() => { cerrarForm(); setShowForm(true); }}
-            style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-            + Nueva
-          </button>
+  // ── Loading ──
+  if (estado === 'cargando') return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#F4FAF7' }}>
+      <div style={{ width:32, height:32, border:'3px solid #D6EDE5', borderTopColor:'#0A9E6E', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+
+  // ── Error / reserva no válida ──
+  if (estado === 'error') return (
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#F4FAF7', padding:24, textAlign:'center' }}>
+      <div style={{ fontSize:56, marginBottom:16 }}>😔</div>
+      <div style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:8 }}>Este enlace no es válido</div>
+      <div style={{ fontSize:14, color:'#6B9080', lineHeight:1.7, maxWidth:360 }}>
+        El enlace de reseña ha caducado, ya no está disponible o la cita no ha sido completada todavía.
+      </div>
+    </div>
+  );
+
+  // ── Ya dejó reseña ──
+  if (estado === 'yaResena') return (
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#F4FAF7', padding:24, textAlign:'center' }}>
+      <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
+      <div style={{ fontSize:20, fontWeight:700, color:'#0B1E16', marginBottom:8 }}>¡Ya dejaste tu reseña!</div>
+      <div style={{ fontSize:14, color:'#6B9080', lineHeight:1.7, maxWidth:360 }}>
+        Ya valoraste esta cita en <strong>{negocio?.nombre}</strong>. ¡Muchas gracias por tu opinión!
+      </div>
+    </div>
+  );
+
+  // ── Enviada con éxito ──
+  if (estado === 'enviada') return (
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#F4FAF7', padding:24, fontFamily:'DM Sans, system-ui, sans-serif' }}>
+      <div style={{ background:'#fff', borderRadius:20, padding:'48px 32px', maxWidth:400, width:'100%', textAlign:'center', boxShadow:'0 8px 40px rgba(0,0,0,0.08)' }}>
+        <div style={{ width:72, height:72, borderRadius:'50%', background:'#063D2A', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 20px', boxShadow:'0 0 0 8px #E8F7F2' }}>
+          ✓
         </div>
+        <div style={{ fontSize:22, fontWeight:800, color:'#0B1E16', marginBottom:8 }}>¡Gracias por tu reseña!</div>
+        <div style={{ fontSize:14, color:'#6B9080', lineHeight:1.7, marginBottom:24 }}>
+          Tu opinión ayuda a <strong>{negocio?.nombre}</strong> y a otros clientes a tomar mejores decisiones.
+        </div>
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
+          <Estrellas interactivo={false}/>
+        </div>
+        {comentario.trim() && (
+          <div style={{ background:'#F4FAF7', borderRadius:10, padding:'12px 16px', fontSize:13.5, color:'#0B1E16', fontStyle:'italic', lineHeight:1.6 }}>
+            "{comentario.trim()}"
+          </div>
+        )}
+      </div>
+      <div style={{ marginTop:20, fontSize:12, color:'#A8C4B8' }}>
+        Reseña gestionada por <strong style={{ color:'#0A9E6E' }}>Reservly</strong>
+      </div>
+    </div>
+  );
+
+  // ── Formulario ──
+  return (
+    <div style={{ minHeight:'100vh', background:'#F4FAF7', fontFamily:'DM Sans, system-ui, sans-serif' }}>
+
+      {/* Header */}
+      <div style={{ background:'#063D2A', padding:'14px 20px', display:'flex', alignItems:'center', gap:8 }}>
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+          <path d="M10 42L10 8C10 5 12 4 14 4L28 4C38 4 44 10 44 18C44 26 38 32 28 32L10 32M21 32L44 42" stroke="white" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="21" cy="32" r="4.5" fill="white"/>
+          <circle cx="21" cy="32" r="2.2" fill="#063D2A"/>
+        </svg>
+        <span style={{ fontSize:14, fontWeight:700, color:'#fff' }}>Reservly</span>
       </div>
 
-      <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:16 }}>
+      <div style={{ maxWidth:480, margin:'0 auto', padding:'32px 16px 48px' }}>
 
-        {/* Form */}
-        {showForm && (
-          <div style={{ background:'#fff', border:'1.5px solid #0A9E6E', borderRadius:14, padding: isMobile ? 16 : 24 }}>
-            <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16', marginBottom:16 }}>
-              {editando ? 'Editar reserva' : 'Nueva reserva'}
-            </div>
-            {editando && reservas.find(r=>r.id===editando)?.estado === 'completada' && (
-              <div style={{ background:'#FFF8E7', border:'1px solid #F5E4A0', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#92400E', marginBottom:14 }}>
-                ⚠️ Esta reserva ya está completada y no puede editarse.
-              </div>
-            )}
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {/* Card negocio */}
+        <div style={{ background:'linear-gradient(135deg, #0A9E6E 0%, #063D2A 100%)', borderRadius:16, padding:'24px 20px', marginBottom:20, textAlign:'center' }}>
+          <div style={{ width:56, height:56, borderRadius:14, background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:700, color:'#fff', margin:'0 auto 12px', border:'2px solid rgba(255,255,255,0.2)' }}>
+            {negocio?.nombre?.[0]?.toUpperCase()}
+          </div>
+          <div style={{ fontSize:18, fontWeight:700, color:'#fff', marginBottom:4 }}>{negocio?.nombre}</div>
+          {negocio?.direccion && (
+            <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)' }}>📍 {negocio.direccion}</div>
+          )}
+        </div>
 
-              {/* Cliente */}
-              <div>
-                <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Cliente *</div>
-                <div style={{ display:'flex', background:'#F4FAF7', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', marginBottom:8 }}>
-                  <button onClick={() => setModoCliente('existente')} style={{
-                    flex:1, padding:'7px', fontSize:12.5, fontWeight:600,
-                    background: modoCliente==='existente' ? '#0A9E6E' : 'transparent',
-                    color: modoCliente==='existente' ? '#fff' : '#6B9080',
-                    border:'none', cursor:'pointer',
-                  }}>Cliente existente</button>
-                  <button onClick={() => setModoCliente('nuevo')} style={{
-                    flex:1, padding:'7px', fontSize:12.5, fontWeight:600,
-                    background: modoCliente==='nuevo' ? '#0A9E6E' : 'transparent',
-                    color: modoCliente==='nuevo' ? '#fff' : '#6B9080',
-                    border:'none', cursor:'pointer',
-                  }}>+ Cliente nuevo</button>
+        {/* Resumen de la cita */}
+        {reserva && (
+          <div style={{ background:'#fff', borderRadius:14, padding:'16px 20px', marginBottom:20, border:'1px solid #EAF5EF' }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>Tu cita</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {[
+                { label:'Servicio',    val: reserva.servicios?.nombre },
+                { label:'Profesional', val: reserva.empleados?.nombre },
+                { label:'Fecha',       val: reserva.fecha },
+                { label:'Hora',        val: reserva.hora_inicio?.slice(0,5) },
+              ].filter(f => f.val).map(f => (
+                <div key={f.label} style={{ display:'flex', justifyContent:'space-between', fontSize:13, padding:'4px 0', borderBottom:'1px solid #EAF5EF' }}>
+                  <span style={{ color:'#6B9080' }}>{f.label}</span>
+                  <span style={{ fontWeight:600, color:'#0B1E16' }}>{f.val}</span>
                 </div>
-                {modoCliente === 'existente' ? (
-                  <select value={form.cliente_id} onChange={e=>setForm({...form, cliente_id:e.target.value})}
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13 }}>
-                    <option value="">Seleccionar cliente...</option>
-                    {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </select>
-                ) : (
-                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                    <input value={clienteNuevo.nombre}
-                      onChange={e=>setClienteNuevo({...clienteNuevo, nombre:e.target.value})}
-                      placeholder="Nombre *"
-                      style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
-                    <input value={clienteNuevo.telefono}
-                      onChange={e=>setClienteNuevo({...clienteNuevo, telefono:e.target.value})}
-                      placeholder="Teléfono"
-                      style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', fontFamily:'DM Mono, monospace' }}/>
-                    <input value={clienteNuevo.email}
-                      onChange={e=>setClienteNuevo({...clienteNuevo, email:e.target.value})}
-                      placeholder="Email (opcional)" type="email"
-                      style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
-                  </div>
-                )}
-              </div>
-
-              {/* Empleado y Servicio */}
-              <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:10 }}>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Empleado</div>
-                  <select value={form.empleado_id} onChange={e=>setForm({...form, empleado_id:e.target.value})}
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13 }}>
-                    <option value="">Sin asignar</option>
-                    {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Servicio</div>
-                  <select value={form.servicio_id} onChange={e=>setForm({...form, servicio_id:e.target.value})}
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13 }}>
-                    <option value="">Sin asignar</option>
-                    {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre} — {s.precio ? s.precio+' EUR' : 'A consultar'}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Fecha, hora y estado */}
-              <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap:10 }}>
-                <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Fecha *</div>
-                  <input type="date" value={form.fecha} onChange={e=>setForm({...form, fecha:e.target.value})}
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
-                </div>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Hora inicio</div>
-                  <input type="time" value={form.hora_inicio} onChange={e=>setForm({...form, hora_inicio:e.target.value})}
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
-                </div>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Hora fin</div>
-                  <input type="time" value={form.hora_fin} onChange={e=>setForm({...form, hora_fin:e.target.value})}
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
-                </div>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Estado</div>
-                  <select value={form.estado} onChange={e=>setForm({...form, estado:e.target.value})}
-                    style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13 }}>
-                    <option value="confirmada">Confirmada</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="cancelada">Cancelada</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Notas */}
-              <div>
-                <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', marginBottom:5 }}>Notas internas</div>
-                <input value={form.notas} onChange={e=>setForm({...form, notas:e.target.value})}
-                  placeholder="Notas internas sobre la reserva..."
-                  style={{ width:'100%', padding:'8px 12px', border:'1.5px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none' }}/>
-              </div>
-
-            </div>
-            <div style={{ display:'flex', gap:8, marginTop:16 }}>
-              <button onClick={guardarReserva} disabled={saving}
-                style={{ background: saving ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                {saving ? 'Guardando...' : editando ? 'Guardar cambios' : 'Guardar reserva'}
-              </button>
-              <button onClick={cerrarForm}
-                style={{ background:'transparent', color:'#6B9080', border:'1px solid #D6EDE5', padding:'8px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                Cancelar
-              </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Filtros */}
-        <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:10, alignItems: isMobile ? 'stretch' : 'center', flexWrap:'wrap' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, padding:'7px 14px', flex: isMobile ? 'auto' : 1 }}>
-            <span style={{ color:'#A8C4B8' }}>🔍</span>
-            <input value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
-              placeholder="Buscar cliente..."
-              style={{ border:'none', outline:'none', fontSize:13, color:'#0B1E16', background:'transparent', width:'100%' }}/>
+        {/* Formulario */}
+        <div style={{ background:'#fff', borderRadius:16, padding:'28px 24px', border:'1px solid #EAF5EF', boxShadow:'0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div style={{ textAlign:'center', marginBottom:28 }}>
+            <div style={{ fontSize:18, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>
+              ¿Cómo fue tu experiencia?
+            </div>
+            <div style={{ fontSize:13.5, color:'#6B9080' }}>
+              Tu opinión ayuda a mejorar el servicio
+            </div>
           </div>
-          <input type="date" value={fechaFiltro} onChange={e => { setFechaFiltro(e.target.value); setPagina(1); }}
-            style={{ padding:'7px 12px', border:'1px solid #D6EDE5', borderRadius:8, fontSize:13, outline:'none', background:'#fff' }}/>
-          {fechaFiltro && (
-            <button onClick={() => { setFechaFiltro(''); setPagina(1); }}
-              style={{ padding:'7px 12px', background:'#FEF2F2', border:'none', borderRadius:8, fontSize:12, color:'#EF4444', fontWeight:600, cursor:'pointer' }}>
-              ✕ Limpiar
-            </button>
-          )}
-          <div style={{ display:'flex', background:'#fff', border:'1px solid #D6EDE5', borderRadius:8, overflow:'hidden', flexWrap:'wrap' }}>
-            {['todas','confirmada','pendiente','completada','cancelada'].map(f => (
-              <button key={f} onClick={() => { setFiltro(f); setPagina(1); }} style={{
-                padding:'7px 10px', fontSize:11.5, fontWeight:500,
-                color: filtro===f ? '#fff' : '#6B9080',
-                background: filtro===f ? '#0A9E6E' : 'transparent',
-                border:'none', borderRight:'1px solid #D6EDE5', cursor:'pointer',
-                textTransform:'capitalize',
-              }}>{f}</button>
-            ))}
+
+          {/* Estrellas */}
+          <div style={{ marginBottom:12 }}>
+            <Estrellas interactivo={true}/>
+          </div>
+
+          {/* Label puntuación */}
+          <div style={{ textAlign:'center', marginBottom:24, minHeight:22 }}>
+            {(hover || puntuacion) > 0 && (
+              <span style={{ fontSize:14, fontWeight:600, color:'#0A9E6E' }}>
+                {LABELS[hover || puntuacion]}
+              </span>
+            )}
+          </div>
+
+          {/* Comentario */}
+          <div style={{ marginBottom:20 }}>
+            <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:8 }}>
+              Comentario <span style={{ fontWeight:400, textTransform:'none' }}>(opcional)</span>
+            </label>
+            <textarea
+              value={comentario}
+              onChange={e => setComentario(e.target.value)}
+              placeholder="Cuéntanos tu experiencia. ¿Qué te gustó? ¿Qué mejorarías?"
+              maxLength={500}
+              style={{ width:'100%', padding:'12px 14px', border:'1.5px solid #D6EDE5', borderRadius:10, fontSize:13.5, fontFamily:'DM Sans, sans-serif', outline:'none', minHeight:110, resize:'vertical', lineHeight:1.6 }}
+              onFocus={e => e.target.style.borderColor='#0A9E6E'}
+              onBlur={e => e.target.style.borderColor='#D6EDE5'}
+            />
+            <div style={{ textAlign:'right', fontSize:11, color:'#A8C4B8', marginTop:4 }}>
+              {comentario.length}/500
+            </div>
+          </div>
+
+          {/* Botón enviar */}
+          <button
+            onClick={enviarResena}
+            disabled={puntuacion === 0 || enviando}
+            style={{
+              width:'100%', padding:'14px',
+              background: puntuacion === 0 ? '#D6EDE5' : enviando ? '#A8C4B8' : '#0A9E6E',
+              color: puntuacion === 0 ? '#A8C4B8' : '#fff',
+              border:'none', borderRadius:10,
+              fontSize:15, fontWeight:700,
+              cursor: puntuacion === 0 || enviando ? 'not-allowed' : 'pointer',
+              transition:'background 0.2s',
+            }}>
+            {enviando ? 'Enviando...' : puntuacion === 0 ? 'Selecciona una puntuación' : 'Enviar reseña →'}
+          </button>
+
+          <div style={{ textAlign:'center', fontSize:12, color:'#A8C4B8', marginTop:14, lineHeight:1.6 }}>
+            Tu reseña es verificada — solo pueden valorar clientes que han tenido una cita real.
           </div>
         </div>
 
-        {/* Lista */}
-        {reservas.length > 0 ? (
-          <>
-            {isMobile ? (
-              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {paginadas.map(r => {
-                  const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
-                  const esCompletada = r.estado === 'completada';
-                  return (
-                    <div key={r.id} style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:14 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:'#0B1E16' }}>{r.clientes?.nombre || '—'}</div>
-                        <span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span>
-                      </div>
-                      <div style={{ fontSize:12.5, color:'#6B9080', marginBottom:4 }}>{r.servicios?.nombre || '—'}</div>
-                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
-                        {r.empleados && <div style={{ width:7, height:7, borderRadius:'50%', background:r.empleados.color||'#ccc' }}/>}
-                        <span style={{ fontSize:12, color:'#6B9080' }}>{r.empleados?.nombre || '—'}</span>
-                        <span style={{ fontSize:12, color:'#A8C4B8', marginLeft:'auto', fontFamily:'DM Mono, monospace' }}>{r.fecha} · {r.hora_inicio?.slice(0,5)}</span>
-                      </div>
-                      <div style={{ display:'flex', gap:6 }}>
-                        {!esCompletada && (
-                          <button onClick={() => abrirEdicion(r)}
-                            style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:8, cursor:'pointer' }}>
-                            Editar
-                          </button>
-                        )}
-                        {r.estado === 'confirmada' && (
-                          <button onClick={() => navigate(`/tpv/${r.id}`)}
-                            style={{ flex:1, padding:'7px', fontSize:12, fontWeight:600, background:'#063D2A', color:'#fff', border:'none', borderRadius:8, cursor:'pointer' }}>
-                            Cobrar
-                          </button>
-                        )}
-                        {r.estado !== 'cancelada' && r.estado !== 'completada' && (
-                          <button onClick={() => eliminarReserva(r.id)}
-                            style={{ padding:'7px 12px', fontSize:12, fontWeight:600, background:'#FEF2F2', color:'#EF4444', border:'none', borderRadius:8, cursor:'pointer' }}>
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {paginadas.length === 0 && (
-                  <div style={{ padding:40, textAlign:'center', color:'#A8C4B8', fontSize:14 }}>No hay reservas que coincidan</div>
-                )}
-              </div>
-            ) : (
-              <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 140px', padding:'10px 20px', background:'#F4FAF7', borderBottom:'1px solid #EAF5EF', gap:12 }}>
-                  {['Cliente','Servicio','Empleado','Fecha','Hora','Estado',''].map(h=>(
-                    <div key={h} style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</div>
-                  ))}
-                </div>
-                {paginadas.map((r, i) => {
-                  const s = ESTADO_STYLES[r.estado] || ESTADO_STYLES.confirmada;
-                  const esCompletada = r.estado === 'completada';
-                  return (
-                    <div key={r.id} style={{ display:'grid', gridTemplateColumns:'2fr 2fr 1.5fr 1fr 1fr 1fr 140px', padding:'14px 20px', borderBottom: i<paginadas.length-1?'1px solid #EAF5EF':'none', gap:12, alignItems:'center' }}
-                      onMouseEnter={e=>e.currentTarget.style.background='#F4FAF7'}
-                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}
-                    >
-                      <div style={{ fontSize:13.5, fontWeight:600, color:'#0B1E16' }}>{r.clientes?.nombre || '—'}</div>
-                      <div style={{ fontSize:13, color:'#6B9080' }}>{r.servicios?.nombre || '—'}</div>
-                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                        <div style={{ width:8, height:8, borderRadius:'50%', background:r.empleados?.color||'#ccc' }}/>
-                        <span style={{ fontSize:13, color:'#0B1E16' }}>{r.empleados?.nombre || '—'}</span>
-                      </div>
-                      <div style={{ fontSize:12.5, color:'#6B9080' }}>{r.fecha}</div>
-                      <div style={{ fontSize:12.5, fontFamily:'DM Mono, monospace', color:'#0B1E16' }}>{r.hora_inicio?.slice(0,5)}</div>
-                      <div><span style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:20, background:s.bg, color:s.color }}>{s.label}</span></div>
-                      <div style={{ display:'flex', gap:4 }}>
-                        {!esCompletada && (
-                          <button onClick={() => abrirEdicion(r)}
-                            style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#E8F7F2', color:'#0A9E6E', border:'none', borderRadius:6, cursor:'pointer' }}>
-                            Editar
-                          </button>
-                        )}
-                        {r.estado === 'confirmada' && (
-                          <button onClick={() => navigate(`/tpv/${r.id}`)}
-                            style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#063D2A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer' }}>
-                            Cobrar
-                          </button>
-                        )}
-                        {r.estado !== 'cancelada' && r.estado !== 'completada' && (
-                          <button onClick={() => eliminarReserva(r.id)}
-                            style={{ padding:'4px 8px', fontSize:11, fontWeight:600, background:'#FEF2F2', color:'#EF4444', border:'none', borderRadius:6, cursor:'pointer' }}>
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {paginadas.length === 0 && (
-                  <div style={{ padding:40, textAlign:'center', color:'#A8C4B8', fontSize:14 }}>No hay reservas que coincidan</div>
-                )}
-              </div>
-            )}
-
-            {/* Paginación */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
-              <div style={{ fontSize:12, color:'#A8C4B8' }}>
-                {filtradas.length} reservas · mostrando {filtradas.length > 0 ? (pagina-1)*POR_PAGINA+1 : 0}–{Math.min(pagina*POR_PAGINA, filtradas.length)}
-              </div>
-              {totalPaginas > 1 && (
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                  <button onClick={() => setPagina(p=>Math.max(1,p-1))} disabled={pagina===1}
-                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===1?'#F4FAF7':'#fff', color: pagina===1?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor: pagina===1?'not-allowed':'pointer' }}>
-                    ← Anterior
-                  </button>
-                  {Array.from({ length: totalPaginas }, (_,i) => i+1).map(p => (
-                    <button key={p} onClick={() => setPagina(p)}
-                      style={{ padding:'6px 10px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===p?'#0A9E6E':'#fff', color: pagina===p?'#fff':'#6B9080', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                      {p}
-                    </button>
-                  ))}
-                  <button onClick={() => setPagina(p=>Math.min(totalPaginas,p+1))} disabled={pagina===totalPaginas}
-                    style={{ padding:'6px 12px', border:'1px solid #D6EDE5', borderRadius:8, background: pagina===totalPaginas?'#F4FAF7':'#fff', color: pagina===totalPaginas?'#A8C4B8':'#6B9080', fontSize:12, fontWeight:600, cursor: pagina===totalPaginas?'not-allowed':'pointer' }}>
-                    Siguiente →
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, padding:'60px 40px', textAlign:'center' }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>📅</div>
-            <div style={{ fontSize:16, fontWeight:700, color:'#0B1E16', marginBottom:6 }}>Sin reservas aún</div>
-            <div style={{ fontSize:13, color:'#6B9080', marginBottom:20 }}>Las reservas aparecerán aquí cuando los clientes reserven</div>
-            <button onClick={() => setShowForm(true)}
-              style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'10px 24px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-              + Nueva reserva
-            </button>
-          </div>
-        )}
-
+        <div style={{ textAlign:'center', marginTop:20, fontSize:12, color:'#A8C4B8' }}>
+          Reseñas gestionadas por <strong style={{ color:'#0A9E6E' }}>Reservly</strong>
+        </div>
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ import Admin from './pages/admin/Admin';
 import Ajustes from './pages/ajustes/Ajustes';
 import PerfilPublico from './pages/perfil/PerfilPublico';
 import TPV from './pages/tpv/TPV';
+import DejarResena from './pages/resenas/DejarResena';
 import Landing from './pages/landing/Landing';
 import PagoCancelado from './pages/pago/PagoCancelado';
 import Vacaciones from './pages/vacaciones/Vacaciones';
@@ -213,6 +214,7 @@ export default function App() {
                   <Route path="/pago/cancelado"      element={<PagoCancelado />} />
                   <Route path="/stock/:id/historial" element={<HistorialStock />} />
                   <Route path="/comparativa" element={<Comparativa />} />
+                  <Route path="/resena/:slug/:reservaId" element={<DejarResena />} />
                   <Route path="/widget"        element={<Navigate to="/ajustes" replace />} />
                   <Route path="/integraciones" element={<Navigate to="/ajustes" replace />} />
                   <Route path="*"                    element={<NotFound />} />
