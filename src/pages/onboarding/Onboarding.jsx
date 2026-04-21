@@ -13,9 +13,24 @@ const PASOS = [
 ];
 
 const TIPOS = [
-  { id:'profesional', emoji:'💈', titulo:'Por profesional', desc:'Cada empleado tiene su propia agenda', ejemplos:'Peluquerías · Clínicas · Fisioterapeutas · Psicólogos' },
-  { id:'recurso',     emoji:'🍽️', titulo:'Por recurso',     desc:'Reservas por mesa, sala o espacio',   ejemplos:'Restaurantes · Salas · Pistas de pádel' },
-  { id:'simple',      emoji:'📅', titulo:'Simple',          desc:'Solo el dueño gestiona la agenda',    ejemplos:'Fotógrafos · Consultores · Formadores' },
+  {
+    id:'profesional', emoji:'💈', titulo:'Por profesional',
+    desc:'Cada persona de tu equipo tiene su propia agenda. El cliente elige con quién quiere la cita.',
+    ejemplos:['Peluquería con 2 o más estilistas','Clínica con varios fisioterapeutas','Centro de estética con varias esteticistas'],
+    cuando:'Cuando tienes empleados y cada uno atiende por separado', color:'#0A9E6E',
+  },
+  {
+    id:'recurso', emoji:'🍽️', titulo:'Por recurso o espacio',
+    desc:'Las reservas son por un espacio, mesa o pista. No importa quién atiende, sino qué está disponible.',
+    ejemplos:['Restaurante con mesas reservables','Club de pádel con pistas','Sala de reuniones o coworking'],
+    cuando:'Cuando lo que se reserva es un espacio, no una persona', color:'#3B82F6',
+  },
+  {
+    id:'simple', emoji:'📅', titulo:'Simple — solo yo',
+    desc:'Eres tú solo quien atiende. Los clientes reservan una cita contigo directamente.',
+    ejemplos:['Fotógrafo autónomo','Consultor o coach','Médico o terapeuta en solitario'],
+    cuando:'Cuando trabajas solo o no necesitas diferenciar empleados', color:'#8B5CF6',
+  },
 ];
 
 const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
@@ -30,10 +45,13 @@ const Toggle = ({ on, onChange }) => (
 export default function Onboarding({ negocioId, onComplete }) {
   const [paso, setPaso] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const [tipo, setTipo] = useState('');
   const [info, setInfo] = useState({ nombre:'', telefono:'', email:'', direccion:'', descripcion:'' });
   const [servicios, setServicios] = useState([{ nombre:'', categoria:'', duracion:45, precio:'' }]);
   const [empleados, setEmpleados] = useState([{ nombre:'', email:'', color:'#0A9E6E' }]);
+  const [slugFinal, setSlugFinal] = useState('');
   const [horario, setHorario] = useState({
     Lunes:     { activo:true,  apertura:'09:00', cierre:'18:00' },
     Martes:    { activo:true,  apertura:'09:00', cierre:'18:00' },
@@ -52,31 +70,44 @@ export default function Onboarding({ negocioId, onComplete }) {
     senal:false, senal_importe:10,
   });
 
-  const siguiente = () => setPaso(p => Math.min(p+1, PASOS.length-1));
-  const anterior  = () => setPaso(p => Math.max(p-1, 0));
+  const siguiente = () => {
+    setError('');
+    if (paso === 1 && !info.nombre.trim()) {
+      setError('El nombre del negocio es obligatorio.');
+      return;
+    }
+    setPaso(p => Math.min(p+1, PASOS.length-1));
+  };
+  const anterior = () => { setError(''); setPaso(p => Math.max(p-1, 0)); };
+
+  const seleccionarTipo = (id) => {
+    setTipo(id);
+    setTimeout(() => setPaso(1), 300); // pequeño delay para ver la selección
+  };
 
   const guardarTodo = async () => {
     setSaving(true);
-
     const slugBase = (info.nombre || 'negocio').toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
       .replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
 
+    // Añadir sufijo único para evitar duplicados
+    const slug = `${slugBase}-${negocioId.slice(0,8)}`;
+    setSlugFinal(slug);
+
     await supabase.from('negocios').update({
-      nombre:    info.nombre    || undefined,
-      telefono:  info.telefono  || null,
-      email:     info.email     || null,
-      direccion: info.direccion || null,
+      nombre:      info.nombre    || undefined,
+      telefono:    info.telefono  || null,
+      email:       info.email     || null,
+      direccion:   info.direccion || null,
       descripcion: info.descripcion || null,
-      slug:      slugBase,
-      tipo,
+      slug, tipo,
     }).eq('id', negocioId);
 
     const serviciosValidos = servicios.filter(s => s.nombre.trim());
     if (serviciosValidos.length > 0) {
       await supabase.from('servicios').insert(serviciosValidos.map(s => ({
-        negocio_id: negocioId,
-        nombre:     s.nombre,
+        negocio_id: negocioId, nombre: s.nombre,
         categoria:  s.categoria || 'General',
         duracion:   parseInt(s.duracion) || 45,
         precio:     s.precio ? parseFloat(s.precio) : null,
@@ -110,7 +141,7 @@ export default function Onboarding({ negocioId, onComplete }) {
 
     await supabase.from('negocios').update({ onboarding_completado:true }).eq('id', negocioId);
     setSaving(false);
-    onComplete();
+    setPaso(7);
   };
 
   const inputStyle = {
@@ -121,6 +152,7 @@ export default function Onboarding({ negocioId, onComplete }) {
   };
 
   const progreso = ((paso+1) / PASOS.length) * 100;
+  const urlReserva = `https://getreservly.com/reservar/${slugFinal}`;
 
   return (
     <div style={{ minHeight:'100vh', background:'#F4FAF7', display:'flex', flexDirection:'column' }}>
@@ -137,7 +169,7 @@ export default function Onboarding({ negocioId, onComplete }) {
           <span style={{ fontSize:16, fontWeight:700, color:'#fff' }}>Reservly</span>
         </div>
         <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>
-          {paso+1} de {PASOS.length}
+          {paso < 7 ? `${paso+1} de ${PASOS.length}` : '¡Configuración completa!'}
         </div>
       </div>
 
@@ -146,132 +178,118 @@ export default function Onboarding({ negocioId, onComplete }) {
         <div style={{ height:'100%', background:'#0A9E6E', width:`${progreso}%`, transition:'width 0.4s ease' }}/>
       </div>
 
-      {/* Steps indicador — solo desktop */}
-      <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:'12px 24px', display:'flex', gap:4, overflowX:'auto' }}>
-        {PASOS.map((p, i) => (
-          <div key={i} style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
-            <div style={{ width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700,
-              background: i < paso ? '#0A9E6E' : i === paso ? '#063D2A' : '#F4FAF7',
-              color: i <= paso ? '#fff' : '#A8C4B8',
-              border: i === paso ? 'none' : i < paso ? 'none' : '1px solid #D6EDE5',
-            }}>
-              {i < paso ? '✓' : i+1}
+      {/* Steps */}
+      {paso < 7 && (
+        <div style={{ background:'#fff', borderBottom:'1px solid #EAF5EF', padding:'12px 24px', display:'flex', gap:4, overflowX:'auto' }}>
+          {PASOS.map((p, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
+              <div style={{ width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700,
+                background: i < paso ? '#0A9E6E' : i === paso ? '#063D2A' : '#F4FAF7',
+                color: i <= paso ? '#fff' : '#A8C4B8',
+                border: i === paso ? 'none' : i < paso ? 'none' : '1px solid #D6EDE5',
+              }}>
+                {i < paso ? '✓' : i+1}
+              </div>
+              {i < PASOS.length-1 && <div style={{ width:16, height:1, background:'#EAF5EF', margin:'0 2px' }}/>}
             </div>
-            {!window.matchMedia('(max-width:600px)').matches && (
-              <span style={{ fontSize:12, fontWeight: i===paso ? 600 : 400, color: i===paso ? '#063D2A' : i<paso ? '#0A9E6E' : '#A8C4B8' }}>
-                {p.label}
-              </span>
-            )}
-            {i < PASOS.length-1 && <div style={{ width:16, height:1, background:'#EAF5EF', margin:'0 2px' }}/>}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Contenido */}
       <div style={{ flex:1, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'32px 16px 40px' }}>
         <div style={{ width:'100%', maxWidth:640 }}>
 
           {/* PASO 0 — Tipo */}
-{paso === 0 && (
-  <div>
-    <h2 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:8 }}>¿Qué tipo de negocio tienes?</h2>
-    <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Esto configura cómo funciona tu agenda. Elige el que más se parezca a tu negocio.</p>
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      {[
-        {
-          id:'profesional',
-          emoji:'💈',
-          titulo:'Por profesional',
-          desc:'Cada persona de tu equipo tiene su propia agenda. El cliente elige con quién quiere la cita.',
-          ejemplos:['Peluquería con 2 o más estilistas', 'Clínica con varios fisioterapeutas', 'Centro de estética con varias esteticistas'],
-          cuando:'Cuando tienes empleados y cada uno atiende por separado',
-          color:'#0A9E6E',
-        },
-        {
-          id:'recurso',
-          emoji:'🍽️',
-          titulo:'Por recurso o espacio',
-          desc:'Las reservas son por un espacio, mesa o pista. No importa quién atiende, sino qué está disponible.',
-          ejemplos:['Restaurante con mesas reservables', 'Club de pádel con pistas', 'Sala de reuniones o coworking'],
-          cuando:'Cuando lo que se reserva es un espacio, no una persona',
-          color:'#3B82F6',
-        },
-        {
-          id:'simple',
-          emoji:'📅',
-          titulo:'Simple — solo yo',
-          desc:'Eres tú solo quien atiende. Los clientes reservan una cita contigo directamente.',
-          ejemplos:['Fotógrafo autónomo', 'Consultor o coach', 'Médico o terapeuta en solitario'],
-          cuando:'Cuando trabajas solo o no necesitas diferenciar empleados',
-          color:'#8B5CF6',
-        },
-      ].map(t => (
-        <div key={t.id} onClick={() => setTipo(t.id)} style={{
-          background: tipo===t.id ? '#E8F7F2' : '#fff',
-          border:`2px solid ${tipo===t.id ? t.color : '#EAF5EF'}`,
-          borderRadius:14, padding:'18px 20px', cursor:'pointer', transition:'all 0.15s',
-        }}>
-          <div style={{ display:'flex', alignItems:'flex-start', gap:14 }}>
-            <div style={{ width:48, height:48, borderRadius:12, background: tipo===t.id ? t.color+'20' : '#F4FAF7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>
-              {t.emoji}
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
-                <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>{t.titulo}</div>
-                <div style={{ width:22, height:22, borderRadius:'50%', background: tipo===t.id ? t.color : '#EAF5EF', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:12, flexShrink:0 }}>
-                  {tipo===t.id ? '✓' : ''}
-                </div>
-              </div>
-              <div style={{ fontSize:13, color:'#0B1E16', marginBottom:8, lineHeight:1.5 }}>{t.desc}</div>
-
-              {/* Ejemplos */}
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                {t.ejemplos.map((ej, i) => (
-                  <span key={i} style={{ fontSize:11.5, background: tipo===t.id ? t.color+'15' : '#F4FAF7', color: tipo===t.id ? t.color : '#6B9080', padding:'3px 10px', borderRadius:20, border:`1px solid ${tipo===t.id ? t.color+'30' : '#EAF5EF'}` }}>
-                    {ej}
-                  </span>
+          {paso === 0 && (
+            <div>
+              <h2 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:8 }}>
+                ¿Qué tipo de negocio tienes?
+              </h2>
+              <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>
+                Elige el que más se parezca. Esto configura cómo funciona tu agenda.
+              </p>
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                {TIPOS.map(t => (
+                  <div key={t.id} onClick={() => seleccionarTipo(t.id)} style={{
+                    background: tipo===t.id ? '#E8F7F2' : '#fff',
+                    border:`2px solid ${tipo===t.id ? t.color : '#EAF5EF'}`,
+                    borderRadius:14, padding:'18px 20px', cursor:'pointer', transition:'all 0.15s',
+                  }}
+                    onMouseEnter={e => { if (tipo!==t.id) e.currentTarget.style.borderColor=t.color+'60'; }}
+                    onMouseLeave={e => { if (tipo!==t.id) e.currentTarget.style.borderColor='#EAF5EF'; }}
+                  >
+                    <div style={{ display:'flex', alignItems:'flex-start', gap:14 }}>
+                      <div style={{ width:48, height:48, borderRadius:12, background: tipo===t.id ? t.color+'20' : '#F4FAF7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>
+                        {t.emoji}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+                          <div style={{ fontSize:15, fontWeight:700, color:'#0B1E16' }}>{t.titulo}</div>
+                          <div style={{ width:22, height:22, borderRadius:'50%', background: tipo===t.id ? t.color : '#EAF5EF', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:12, flexShrink:0 }}>
+                            {tipo===t.id ? '✓' : ''}
+                          </div>
+                        </div>
+                        <div style={{ fontSize:13, color:'#0B1E16', marginBottom:8, lineHeight:1.5 }}>{t.desc}</div>
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                          {t.ejemplos.map((ej, i) => (
+                            <span key={i} style={{ fontSize:11.5, background: tipo===t.id ? t.color+'15' : '#F4FAF7', color: tipo===t.id ? t.color : '#6B9080', padding:'3px 10px', borderRadius:20, border:`1px solid ${tipo===t.id ? t.color+'30' : '#EAF5EF'}` }}>
+                              {ej}
+                            </span>
+                          ))}
+                        </div>
+                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <span style={{ fontSize:11, color:'#A8C4B8' }}>💡</span>
+                          <span style={{ fontSize:12, color:'#A8C4B8', fontStyle:'italic' }}>{t.cuando}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
-
-              {/* Cuándo elegirlo */}
-              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <span style={{ fontSize:11, color:'#A8C4B8' }}>💡</span>
-                <span style={{ fontSize:12, color:'#A8C4B8', fontStyle:'italic' }}>{t.cuando}</span>
-              </div>
             </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+          )}
+
           {/* PASO 1 — Info */}
           {paso === 1 && (
             <div>
-              <h2 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:8 }}>Cuéntanos sobre tu negocio</h2>
-              <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>Esta información aparece en tu página pública de reservas.</p>
+              <h2 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:8 }}>
+                Cuéntanos sobre tu negocio
+              </h2>
+              <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>
+                Esta información aparece en tu página pública de reservas.
+              </p>
               <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                <div>
+                  <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:5 }}>
+                    Nombre del negocio *
+                  </label>
+                  <input value={info.nombre} onChange={e => setInfo({...info, nombre:e.target.value})}
+                    placeholder="Ej: Peluquería Mía" style={{ ...inputStyle, borderColor: error ? '#EF4444' : '#D6EDE5' }}
+                    onFocus={e => { setError(''); e.target.style.borderColor='#0A9E6E'; }}
+                    onBlur={e => e.target.style.borderColor='#D6EDE5'}/>
+                  {error && <div style={{ fontSize:12, color:'#EF4444', marginTop:4 }}>{error}</div>}
+                </div>
                 {[
-                  { key:'nombre',    label:'Nombre del negocio *', placeholder:'Ej: Peluquería Mía' },
-                  { key:'telefono',  label:'Teléfono',             placeholder:'+34 974 000 000' },
-                  { key:'email',     label:'Email de contacto',    placeholder:'info@tunegocio.com', type:'email' },
-                  { key:'direccion', label:'Dirección',            placeholder:'Calle Mayor 14, Huesca' },
+                  { key:'telefono',  label:'Teléfono',          placeholder:'+34 974 000 000' },
+                  { key:'email',     label:'Email de contacto', placeholder:'info@tunegocio.com', type:'email' },
+                  { key:'direccion', label:'Dirección',         placeholder:'Calle Mayor 14, Huesca' },
                 ].map(f => (
                   <div key={f.key}>
                     <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:5 }}>{f.label}</label>
-                    <input value={info[f.key]} onChange={e=>setInfo({...info, [f.key]:e.target.value})}
+                    <input value={info[f.key]} onChange={e => setInfo({...info, [f.key]:e.target.value})}
                       placeholder={f.placeholder} type={f.type||'text'} style={inputStyle}
-                      onFocus={e=>e.target.style.borderColor='#0A9E6E'}
-                      onBlur={e=>e.target.style.borderColor='#D6EDE5'}/>
+                      onFocus={e => e.target.style.borderColor='#0A9E6E'}
+                      onBlur={e => e.target.style.borderColor='#D6EDE5'}/>
                   </div>
                 ))}
                 <div>
                   <label style={{ fontSize:11.5, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:5 }}>Descripción</label>
-                  <textarea value={info.descripcion} onChange={e=>setInfo({...info, descripcion:e.target.value})}
+                  <textarea value={info.descripcion} onChange={e => setInfo({...info, descripcion:e.target.value})}
                     placeholder="Describe tu negocio en pocas palabras..."
                     style={{ ...inputStyle, minHeight:80, resize:'vertical' }}
-                    onFocus={e=>e.target.style.borderColor='#0A9E6E'}
-                    onBlur={e=>e.target.style.borderColor='#D6EDE5'}/>
+                    onFocus={e => e.target.style.borderColor='#0A9E6E'}
+                    onBlur={e => e.target.style.borderColor='#D6EDE5'}/>
                 </div>
               </div>
             </div>
@@ -319,8 +337,8 @@ export default function Onboarding({ negocioId, onComplete }) {
                 ))}
                 <button onClick={() => setServicios([...servicios, { nombre:'', categoria:'', duracion:45, precio:'' }])}
                   style={{ background:'transparent', border:'1.5px dashed #D6EDE5', borderRadius:12, padding:14, color:'#6B9080', fontSize:13, cursor:'pointer' }}
-                  onMouseEnter={e=>{ e.target.style.borderColor='#0A9E6E'; e.target.style.color='#0A9E6E'; }}
-                  onMouseLeave={e=>{ e.target.style.borderColor='#D6EDE5'; e.target.style.color='#6B9080'; }}>
+                  onMouseEnter={e=>{ e.currentTarget.style.borderColor='#0A9E6E'; e.currentTarget.style.color='#0A9E6E'; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.borderColor='#D6EDE5'; e.currentTarget.style.color='#6B9080'; }}>
                   + Añadir otro servicio
                 </button>
               </div>
@@ -371,8 +389,8 @@ export default function Onboarding({ negocioId, onComplete }) {
                   ))}
                   <button onClick={() => setEmpleados([...empleados, { nombre:'', email:'', color:'#3B82F6' }])}
                     style={{ background:'transparent', border:'1.5px dashed #D6EDE5', borderRadius:12, padding:14, color:'#6B9080', fontSize:13, cursor:'pointer' }}
-                    onMouseEnter={e=>{ e.target.style.borderColor='#0A9E6E'; e.target.style.color='#0A9E6E'; }}
-                    onMouseLeave={e=>{ e.target.style.borderColor='#D6EDE5'; e.target.style.color='#6B9080'; }}>
+                    onMouseEnter={e=>{ e.currentTarget.style.borderColor='#0A9E6E'; e.currentTarget.style.color='#0A9E6E'; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.borderColor='#D6EDE5'; e.currentTarget.style.color='#6B9080'; }}>
                     + Añadir otro empleado
                   </button>
                 </div>
@@ -423,10 +441,10 @@ export default function Onboarding({ negocioId, onComplete }) {
               <p style={{ fontSize:14, color:'#6B9080', marginBottom:24 }}>¿Cómo quieres comunicarte con tus clientes?</p>
               <div style={{ background:'#fff', border:'1px solid #EAF5EF', borderRadius:14, overflow:'hidden' }}>
                 {[
-                  { key:'notif_email',    title:'Confirmación por email',     desc:'El cliente recibe un email al reservar' },
-                  { key:'notif_whatsapp', title:'Confirmación por WhatsApp',  desc:'El cliente recibe un WhatsApp al reservar' },
-                  { key:'recordatorio',   title:'Recordatorio de cita',       desc:'Aviso automático antes de la cita' },
-                  { key:'valoraciones',   title:'Pedir valoración tras cita',  desc:'WhatsApp automático post-cita' },
+                  { key:'notif_email',    title:'Confirmación por email',    desc:'El cliente recibe un email al reservar' },
+                  { key:'notif_whatsapp', title:'Confirmación por WhatsApp', desc:'El cliente recibe un WhatsApp al reservar' },
+                  { key:'recordatorio',   title:'Recordatorio de cita',      desc:'Aviso automático antes de la cita' },
+                  { key:'valoraciones',   title:'Pedir valoración tras cita', desc:'WhatsApp automático post-cita' },
                 ].map((item, i, arr) => (
                   <div key={item.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom: i<arr.length-1?'1px solid #EAF5EF':'none', gap:16 }}>
                     <div>
@@ -492,47 +510,98 @@ export default function Onboarding({ negocioId, onComplete }) {
                   </div>
                 )}
               </div>
+
+              {/* Botón guardar en paso 6 */}
+              <div style={{ marginTop:28, display:'flex', justifyContent:'space-between', gap:10 }}>
+                <button onClick={anterior}
+                  style={{ background:'transparent', border:'1.5px solid #D6EDE5', color:'#6B9080', padding:'10px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                  ← Anterior
+                </button>
+                <button onClick={guardarTodo} disabled={saving}
+                  style={{ background: saving ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', padding:'10px 32px', borderRadius:8, fontSize:14, fontWeight:700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  {saving ? 'Configurando...' : 'Completar configuración →'}
+                </button>
+              </div>
             </div>
           )}
 
           {/* PASO 7 — Listo */}
           {paso === 7 && (
             <div style={{ textAlign:'center', padding:'20px 0' }}>
-              <div style={{ fontSize:72, marginBottom:20 }}>🎉</div>
-              <h2 style={{ fontSize:'clamp(22px,4vw,28px)', fontWeight:700, color:'#0B1E16', marginBottom:12 }}>¡Todo listo!</h2>
-              <p style={{ fontSize:15, color:'#6B9080', marginBottom:32, lineHeight:1.6 }}>
-                Tu negocio está configurado. Ya puedes empezar a recibir reservas.
+              {/* Confetti visual */}
+              <div style={{ fontSize:72, marginBottom:20, animation:'bounce 0.6s ease' }}>🎉</div>
+              <h2 style={{ fontSize:'clamp(24px,4vw,32px)', fontWeight:800, color:'#0B1E16', marginBottom:12 }}>
+                ¡{info.nombre || 'Tu negocio'} está listo!
+              </h2>
+              <p style={{ fontSize:15, color:'#6B9080', marginBottom:32, lineHeight:1.6, maxWidth:480, margin:'0 auto 32px' }}>
+                Ya puedes recibir reservas online. Comparte tu link con tus clientes y empieza hoy.
               </p>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12, marginBottom:32, textAlign:'left' }}>
+
+              {/* Link de reservas — lo más importante */}
+              <div style={{ background:'#063D2A', borderRadius:16, padding:'24px', marginBottom:24, textAlign:'left' }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:10 }}>
+                  Tu link de reservas
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                  <div style={{ flex:1, background:'rgba(255,255,255,0.1)', borderRadius:8, padding:'10px 14px', fontSize:13, fontFamily:'DM Mono, monospace', color:'#7FFFD4', wordBreak:'break-all', minWidth:0 }}>
+                    {urlReserva}
+                  </div>
+                  <button onClick={() => {
+                    navigator.clipboard.writeText(urlReserva);
+                    setLinkCopiado(true);
+                    setTimeout(() => setLinkCopiado(false), 2500);
+                  }} style={{ padding:'10px 16px', background: linkCopiado ? '#0A9E6E' : 'rgba(255,255,255,0.15)', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0, transition:'background 0.2s' }}>
+                    {linkCopiado ? '✓ Copiado' : '📋 Copiar'}
+                  </button>
+                </div>
+                <div style={{ marginTop:12, display:'flex', gap:8, flexWrap:'wrap' }}>
+                  <a href={urlReserva} target="_blank" rel="noopener noreferrer"
+                    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 14px', background:'rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.8)', borderRadius:8, fontSize:12, fontWeight:600, textDecoration:'none' }}>
+                    👁 Ver página
+                  </a>
+                  <a href={`https://wa.me/?text=${encodeURIComponent(`Ahora puedes reservar tu cita en ${info.nombre} desde aquí: ${urlReserva}`)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 14px', background:'#25D366', color:'#fff', borderRadius:8, fontSize:12, fontWeight:600, textDecoration:'none' }}>
+                    💬 Compartir por WhatsApp
+                  </a>
+                </div>
+              </div>
+
+              {/* Resumen configuración */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:28, textAlign:'left' }}>
                 {[
-                  { emoji:'✅', title:'Tipo configurado',   desc: TIPOS.find(t=>t.id===tipo)?.titulo || tipo },
-                  { emoji:'✅', title:'Servicios añadidos', desc:`${servicios.filter(s=>s.nombre).length} servicios` },
-                  { emoji:'✅', title:'Horario definido',   desc:'Listo para reservas' },
-                  { emoji:'✅', title:'Notificaciones',     desc:'Email configurado' },
+                  { emoji:'✅', title:'Tipo',       desc: TIPOS.find(t=>t.id===tipo)?.titulo || tipo },
+                  { emoji:'✅', title:'Servicios',  desc:`${servicios.filter(s=>s.nombre).length} configurados` },
+                  { emoji:'✅', title:'Horario',    desc:'Listo para reservas' },
+                  { emoji:'✅', title:'Notificaciones', desc:'Email configurado' },
                 ].map(item => (
-                  <div key={item.title} style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:12, padding:16 }}>
-                    <div style={{ fontSize:20, marginBottom:6 }}>{item.emoji}</div>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16' }}>{item.title}</div>
-                    <div style={{ fontSize:12, color:'#6B9080', marginTop:2 }}>{item.desc}</div>
+                  <div key={item.title} style={{ background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:12, padding:'14px 16px' }}>
+                    <div style={{ fontSize:18, marginBottom:4 }}>{item.emoji}</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#0B1E16' }}>{item.title}</div>
+                    <div style={{ fontSize:11.5, color:'#6B9080', marginTop:2 }}>{item.desc}</div>
                   </div>
                 ))}
               </div>
-              <button onClick={guardarTodo} disabled={saving}
-                style={{ background: saving ? '#A8C4B8' : '#0A9E6E', color:'#fff', border:'none', padding:'14px 40px', borderRadius:12, fontSize:15, fontWeight:700, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                {saving ? 'Configurando...' : 'Entrar al panel →'}
+
+              <button onClick={onComplete}
+                style={{ background:'#063D2A', color:'#fff', border:'none', padding:'14px 40px', borderRadius:12, fontSize:15, fontWeight:700, cursor:'pointer', width:'100%', maxWidth:360 }}>
+                Ir al panel de control →
               </button>
+              <div style={{ marginTop:12, fontSize:12, color:'#A8C4B8' }}>
+                Puedes cambiar todo esto después en Ajustes
+              </div>
             </div>
           )}
 
-          {/* Navegación */}
-          {paso < 7 && (
+          {/* Navegación — pasos 1-5 */}
+          {paso >= 1 && paso <= 5 && (
             <div style={{ display:'flex', justifyContent:'space-between', marginTop:28, gap:10 }}>
-              <button onClick={anterior} disabled={paso===0}
-                style={{ background:'transparent', border:'1.5px solid #D6EDE5', color:'#6B9080', padding:'10px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor: paso===0?'not-allowed':'pointer', opacity: paso===0?0.4:1 }}>
+              <button onClick={anterior}
+                style={{ background:'transparent', border:'1.5px solid #D6EDE5', color:'#6B9080', padding:'10px 20px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
                 ← Anterior
               </button>
-              <button onClick={siguiente} disabled={paso===0 && !tipo}
-                style={{ background:(paso===0&&!tipo)?'#A8C4B8':'#0A9E6E', color:'#fff', border:'none', padding:'10px 28px', borderRadius:8, fontSize:13, fontWeight:600, cursor:(paso===0&&!tipo)?'not-allowed':'pointer' }}>
+              <button onClick={siguiente}
+                style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'10px 28px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
                 Siguiente →
               </button>
             </div>
