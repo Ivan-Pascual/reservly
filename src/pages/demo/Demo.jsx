@@ -273,7 +273,17 @@ export default function Demo() {
     empleados: renderEmpleados,
     stock:     renderStock,
   };
-
+{/* Banner CTA fijo en la demo */}
+<div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:100, background:'linear-gradient(135deg, #063D2A 0%, #0A4D2E 100%)', padding:'12px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', boxShadow:'0 -4px 20px rgba(0,0,0,0.15)' }}>
+  <div>
+    <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>¿Te convence Reservly?</div>
+    <div style={{ fontSize:11.5, color:'rgba(255,255,255,0.6)' }}>30 días gratis · Sin tarjeta · Cancela cuando quieras</div>
+  </div>
+  <button onClick={() => navigate('/login')}
+    style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'10px 20px', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+    Empezar gratis →
+  </button>
+</div>
   // ── LAYOUT ÚNICO — sidebar siempre visible ─────────────────
   return (
     <div style={{ display:'flex', height:'100vh', background:'#F4FAF7', fontFamily:'DM Sans, system-ui, sans-serif', overflow:'hidden' }}>

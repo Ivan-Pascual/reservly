@@ -318,7 +318,53 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
+{/* Stock + TPV — diferenciador */}
+<section style={{ padding:'60px 6vw', background:'#063D2A' }}>
+  <div style={{ maxWidth:1000, margin:'0 auto', display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap:32, alignItems:'center' }}>
+    <div>
+      <div style={{ fontSize:12, fontWeight:700, color:'#7FFFD4', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>Diferenciador único</div>
+      <h2 style={{ fontSize:'clamp(22px, 3vw, 38px)', fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1.2, marginBottom:16 }}>
+        Reservas + Stock + TPV.<br/>Todo en uno.
+      </h2>
+      <p style={{ fontSize:15, color:'rgba(255,255,255,0.65)', lineHeight:1.8, marginBottom:24 }}>
+        Booksy no tiene gestión de stock. Fresha tampoco. Reservly es la única herramienta del mercado que une agenda, cobro en mostrador y control de inventario en un solo panel.
+      </p>
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {[
+          { emoji:'📦', texto:'Stock con escáner de código de barras — pistola o cámara del móvil' },
+          { emoji:'💳', texto:'TPV integrado — cobra y el stock se descuenta solo' },
+          { emoji:'⚠️', texto:'Alertas de stock mínimo — nunca te quedes sin producto' },
+          { emoji:'📊', texto:'Valor del inventario en tiempo real' },
+        ].map((item, i) => (
+          <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+            <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
+            <span style={{ fontSize:14, color:'rgba(255,255,255,0.75)', lineHeight:1.6 }}>{item.texto}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {[
+        { nombre:'Champú hidratante', stock:12, min:5, precio:'14.90€', ok:true },
+        { nombre:'Tinte rubio',       stock:3,  min:5, precio:'8.90€',  ok:false },
+        { nombre:'Mascarilla',        stock:0,  min:3, precio:'22.50€', cero:true },
+        { nombre:'Acondicionador',    stock:8,  min:4, precio:'12.90€', ok:true },
+      ].map((p, i) => (
+        <div key={i} style={{ background: p.cero ? '#FEF2F2' : !p.ok ? '#FFF8E7' : 'rgba(255,255,255,0.06)', border:`1px solid ${p.cero ? '#FECACA' : !p.ok ? '#F5E4A0' : 'rgba(255,255,255,0.1)'}`, borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+          <div>
+            <div style={{ fontSize:13, fontWeight:600, color: p.cero || !p.ok ? '#0B1E16' : '#fff' }}>{p.nombre}</div>
+            <div style={{ fontSize:11, color: p.cero ? '#EF4444' : !p.ok ? '#F59E0B' : 'rgba(255,255,255,0.5)', marginTop:2 }}>
+              {p.cero ? 'Sin stock' : !p.ok ? `Stock bajo (${p.stock}/${p.min})` : `Stock OK · ${p.stock} uds`}
+            </div>
+          </div>
+          <div style={{ fontSize:13, fontWeight:700, fontFamily:'DM Mono, monospace', color: p.cero ? '#EF4444' : !p.ok ? '#F59E0B' : '#7FFFD4', flexShrink:0 }}>
+            {p.precio}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
       {/* Features */}
       <section id="features" style={{ padding:'80px 6vw', background:'#F4FAF7' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
