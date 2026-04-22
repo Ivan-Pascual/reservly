@@ -57,7 +57,6 @@ export default function Dashboard() {
   const [permisoNotif, setPermisoNotif] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   );
-  const [horaActual, setHoraActual] = useState(new Date());
   const [notas, setNotas] = useState([]);
   const [notaInput, setNotaInput] = useState('');
   const [pagoExitoso, setPagoExitoso] = useState(false);
@@ -72,7 +71,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => setHoraActual(new Date()), 60000);
+    const interval = setInterval(() => {}, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -97,11 +96,9 @@ export default function Dashboard() {
       supabase.from('tpv').select('importe').eq('negocio_id', negocio.id)
         .gte('created_at', inicioMes + 'T00:00:00'),
       supabase.from('tpv').select('importe').eq('negocio_id', negocio.id),
-      // Excluye canceladas
       supabase.from('reservas').select('*', { count:'exact', head:true })
         .eq('negocio_id', negocio.id).eq('fecha', hoy)
         .not('estado', 'eq', 'cancelada'),
-      // Excluye canceladas
       supabase.from('reservas').select('*', { count:'exact', head:true })
         .eq('negocio_id', negocio.id).gte('fecha', inicioMes)
         .not('estado', 'eq', 'cancelada'),
@@ -199,20 +196,37 @@ export default function Dashboard() {
               📅 Ver agenda
             </button>
           )}
-          {permisoNotif !== 'granted' && (
+
+          {/* Botón alertas — con badge de pendientes */}
+          {permisoNotif !== 'granted' ? (
             <button onClick={async () => {
               const ok = await pushNotifications.solicitarPermiso();
               setPermisoNotif(ok ? 'granted' : 'denied');
-            }}
-              style={{ background:'#FFF8E7', color:'#92400E', border:'1px solid #F5E4A0', padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>
+            }} style={{ background:'#FFF8E7', color:'#92400E', border:'1px solid #F5E4A0', padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6, position:'relative' }}>
               🔔 Activar alertas
+              {stats.pendientes > 0 && (
+                <span style={{ background:'#EF4444', color:'#fff', borderRadius:20, padding:'1px 7px', fontSize:10, fontWeight:700 }}>
+                  {stats.pendientes}
+                </span>
+              )}
             </button>
+          ) : (
+            !isMobile && (
+              <div style={{ display:'flex', alignItems:'center', gap:6, background:'#E8F7F2', border:'1px solid #D6EDE5', borderRadius:20, padding:'5px 12px', position:'relative', cursor: stats.pendientes > 0 ? 'pointer' : 'default' }}
+                onClick={() => stats.pendientes > 0 && navigate('/reservas')}>
+                <span style={{ fontSize:13 }}>🔔</span>
+                <span style={{ fontSize:12, fontWeight:600, color:'#063D2A' }}>
+                  {stats.pendientes > 0 ? `${stats.pendientes} pendientes` : 'Alertas activas'}
+                </span>
+                {stats.pendientes > 0 && (
+                  <div style={{ position:'absolute', top:-6, right:-6, width:18, height:18, borderRadius:'50%', background:'#EF4444', color:'#fff', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 6px rgba(239,68,68,0.4)' }}>
+                    {stats.pendientes}
+                  </div>
+                )}
+              </div>
+            )
           )}
-          {permisoNotif === 'granted' && !isMobile && (
-            <span style={{ fontSize:12, color:'#0A9E6E', display:'flex', alignItems:'center', gap:4 }}>
-              🔔 Alertas activas
-            </span>
-          )}
+
           <button onClick={() => navigate('/reservas')}
             style={{ background:'#0A9E6E', color:'#fff', border:'none', padding:'8px 14px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
             + Nueva
@@ -336,10 +350,10 @@ export default function Dashboard() {
           <div style={{ fontSize:11, fontWeight:600, color:'#6B9080', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:8 }}>Reservas</div>
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:10 }}>
             {[
-              { label:'Citas hoy',  value: stats.hoy,        featured:true },
-              { label:'Este mes',   value: stats.mes,         note:'excl. canceladas' },
-              { label:'Pendientes', value: stats.pendientes   },
-              { label:'Canceladas', value: stats.canceladas   },
+              { label:'Citas hoy',  value: stats.hoy,      featured:true },
+              { label:'Este mes',   value: stats.mes,       note:'excl. canceladas' },
+              { label:'Pendientes', value: stats.pendientes },
+              { label:'Canceladas', value: stats.canceladas },
             ].map(s => (
               <div key={s.label} style={{ background: s.featured ? '#063D2A' : '#fff', border:'1px solid #EAF5EF', borderRadius:12, padding:'14px 16px' }}>
                 <div style={{ fontSize:11, fontWeight:600, color: s.featured ? '#ffffff60' : '#6B9080', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:8 }}>{s.label}</div>
