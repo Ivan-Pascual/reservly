@@ -1,92 +1,80 @@
 # Reservly
 
-> Tus citas, en piloto automático.
+**Tus citas, en piloto automático.** SaaS de reservas y gestión para negocios locales: peluquerías, estética, fisioterapia y similares.
 
-SaaS de gestión de reservas y citas para negocios locales en España.
+**[Ver la demo](https://reservly-yqwz.vercel.app/demo)** · sin registro, con datos de ejemplo
+
+<!-- Capturas: añade aquí 3-4 imágenes (agenda, ficha de cliente, página pública de reserva y TPV) en docs/capturas/ -->
+
+## Qué incluye
+
+**Para el negocio**
+- Agenda por empleado y gestión de reservas con estados (confirmada, pendiente, cancelada)
+- Clientes con ficha, historial y etiquetas (VIP, regular, nuevo)
+- Empleados con comisiones (porcentaje o fijo) y vacaciones
+- Servicios con duración, precio y categoría
+- TPV para cobrar cada cita, bonos y descuentos
+- Stock con escáner de códigos de barras desde la cámara e historial de movimientos
+- Fidelización, valoraciones y reseñas de clientes
+- Estadísticas de facturación y actividad
+- Exportación a Excel y PDF, y copias de seguridad
+
+**Para sus clientes**
+- Página pública de reserva por negocio (`/reservar/:slug`) y perfil público
+- Widget embebible para la web del negocio (`widget.js`)
+- QR imprimible que lleva a la página de reserva
+- Notificaciones y sincronización con Google Calendar
+
+**Negocio**
+- Tres planes de suscripción con Stripe Checkout y webhook con verificación de firma
+- Control de acceso por plan en la interfaz (`PlanGate`)
+- Landing, precios, comparativa y textos legales
 
 ## Stack
 
-- **Frontend:** React 18 + React Router
-- **Backend:** Supabase (PostgreSQL + Auth + RLS)
-- **Estilos:** CSS-in-JS inline
-- **Deploy:** Vercel (frontend) + Supabase (backend)
+| Capa | Tecnología |
+|---|---|
+| Frontend | React 19, React Router 7 (Create React App), PWA con Service Worker |
+| Backend | Supabase: PostgreSQL, Auth y Row Level Security |
+| Pagos | Stripe Checkout + webhook en funciones serverless de Vercel |
+| Documentos | jsPDF y SheetJS |
+| Escáner | ZXing |
+| Despliegue | Vercel |
 
-## Requisitos
+## Seguridad
 
-- Node.js 18+
-- Cuenta en Supabase
+- **Row Level Security en las 13 tablas** con 19 políticas: cada negocio solo accede a sus propios datos, aunque alguien manipule el cliente (`src/supabase/schema.sql`).
+- **Claves fuera del código:** solo variables de entorno; la clave de servicio de Supabase y la de Stripe viven únicamente en el servidor (`/api`).
+- **Webhook de Stripe** verificado con `constructEvent` antes de tocar ningún dato.
+- Cabeceras de seguridad en Vercel; la página de reserva permite incrustarse para que funcione el widget.
 
-## Instalación local
+## Arrancar en local
+
 ```bash
-git clone https://github.com/tu-usuario/reservly.git
-cd reservly
 npm install
+cp .env.example .env    # y rellena tus valores
+npm start               # http://localhost:3000
+npm test
 ```
 
-Crea el archivo `.env` en la raíz:
-REACT_APP_SUPABASE_URL=https://tu-proyecto.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=tu-anon-key
+Base de datos: crea un proyecto en Supabase y ejecuta `src/supabase/schema.sql` en el SQL Editor.
 
-Arranca el servidor de desarrollo:
-```bash
-npm start
+## Estructura
+
+```
+api/                    funciones serverless (Stripe Checkout y webhook)
+public/widget.js        widget embebible para webs de negocios
+src/pages/              una carpeta por sección (agenda, clientes, tpv, stock…)
+src/components/         layout, búsqueda global, control de planes
+src/hooks/              negocio actual, plan, móvil
+src/services/           exportar, copias, notificaciones, Google Calendar
+src/supabase/schema.sql esquema y políticas RLS
 ```
 
-## Variables de entorno
+## Autor
 
-| Variable | Descripción |
-|----------|-------------|
-| `REACT_APP_SUPABASE_URL` | URL del proyecto de Supabase |
-| `REACT_APP_SUPABASE_ANON_KEY` | Clave anon pública de Supabase |
+[Iván Pascual López](https://github.com/Ivan-Pascual) · Junior AI & FullStack Developer
 
-## Base de datos
+## Licencia
 
-Las tablas necesarias están en `supabase/schema.sql`. Ejecuta el SQL en el editor de Supabase para crearlas.
-
-## Estructura del proyecto
-src/
-├── components/
-│   ├── layout/
-│   │   ├── Layout.jsx
-│   │   └── Sidebar.jsx
-│   └── ErrorBoundary.jsx
-├── hooks/
-│   └── useNegocio.js
-├── pages/
-│   ├── auth/Login.jsx
-│   ├── onboarding/Onboarding.jsx
-│   ├── dashboard/Dashboard.jsx
-│   ├── reservas/Reservas.jsx
-│   ├── clientes/
-│   │   ├── Clientes.jsx
-│   │   └── FichaCliente.jsx
-│   ├── empleados/Empleados.jsx
-│   ├── servicios/Servicios.jsx
-│   ├── comisiones/Comisiones.jsx
-│   ├── bonos/Bonos.jsx
-│   ├── valoraciones/Valoraciones.jsx
-│   ├── estadisticas/Estadisticas.jsx
-│   ├── ajustes/Ajustes.jsx
-│   ├── vacaciones/Vacaciones.jsx
-│   ├── tpv/TPV.jsx
-│   └── publica/PaginaPublica.jsx
-├── supabase.js
-└── App.js
-
-## Planes
-
-| Plan | Precio | Empleados |
-|------|--------|-----------|
-| Solo | 19 EUR/mes | 1 |
-| Equipo | 39 EUR/mes | 5 |
-| Negocio | 79 EUR/mes | Ilimitado |
-
-## Página pública
-
-Cada negocio tiene una URL pública en:
-https://reservly.com/reservar/[slug-del-negocio]
-
-## Contacto
-
-- Web: [reservly.com](https://reservly.com)
-- Email: hola@reservly.com
+MIT

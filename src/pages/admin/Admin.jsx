@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useNavigate } from 'react-router-dom';
 
-const ADMIN_EMAIL = 'ivanpascual100@gmail.com';
+// El acceso real lo protegen las políticas RLS de Supabase; esto solo oculta la pantalla.
+const ADMIN_EMAIL = process.env.REACT_APP_ADMIN_EMAIL;
 
 export default function Admin() {
   const navigate = useNavigate();
