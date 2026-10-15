@@ -2,32 +2,27 @@
 
 **Tus citas, en piloto automático.** SaaS de reservas y gestión para negocios locales: peluquerías, estética, fisioterapia y similares.
 
-**[Ver la demo](https://reservly-yqwz.vercel.app/demo)** · sin registro, con datos de ejemplo
-
-<!-- Capturas: añade aquí 3-4 imágenes (agenda, ficha de cliente, página pública de reserva y TPV) en docs/capturas/ -->
+**[getreservly.com](https://getreservly.com)** · **[Ver la demo](https://getreservly.com/demo)** (sin registro, con datos de ejemplo)
 
 ## Qué incluye
 
 **Para el negocio**
-- Agenda por empleado y gestión de reservas con estados (confirmada, pendiente, cancelada)
+- Agenda por empleado y reservas con estados (confirmada, pendiente, cancelada)
 - Clientes con ficha, historial y etiquetas (VIP, regular, nuevo)
 - Empleados con comisiones (porcentaje o fijo) y vacaciones
 - Servicios con duración, precio y categoría
-- TPV para cobrar cada cita, bonos y descuentos
+- TPV para cobrar cada cita, con bonos y descuentos
 - Stock con escáner de códigos de barras desde la cámara e historial de movimientos
-- Fidelización, valoraciones y reseñas de clientes
-- Estadísticas de facturación y actividad
+- Fidelización, valoraciones y estadísticas de facturación
 - Exportación a Excel y PDF, y copias de seguridad
 
 **Para sus clientes**
 - Página pública de reserva por negocio (`/reservar/:slug`) y perfil público
-- Widget embebible para la web del negocio (`widget.js`)
-- QR imprimible que lleva a la página de reserva
+- Widget embebible para la web del negocio (`widget.js`) y QR imprimible
 - Notificaciones y sincronización con Google Calendar
 
-**Negocio**
-- Tres planes de suscripción con Stripe Checkout y webhook con verificación de firma
-- Control de acceso por plan en la interfaz (`PlanGate`)
+**Como producto**
+- Tres planes con Stripe Checkout y control de acceso por plan en la interfaz
 - Landing, precios, comparativa y textos legales
 
 ## Stack
@@ -43,10 +38,10 @@
 
 ## Seguridad
 
-- **Row Level Security en las 13 tablas** con 19 políticas: cada negocio solo accede a sus propios datos, aunque alguien manipule el cliente (`src/supabase/schema.sql`).
+- **Row Level Security en las 13 tablas** (19 políticas): cada negocio solo accede a sus propios datos, aunque alguien manipule el cliente (`src/supabase/schema.sql`).
 - **Claves fuera del código:** solo variables de entorno; la clave de servicio de Supabase y la de Stripe viven únicamente en el servidor (`/api`).
 - **Webhook de Stripe** verificado con `constructEvent` antes de tocar ningún dato.
-- Cabeceras de seguridad en Vercel; la página de reserva permite incrustarse para que funcione el widget.
+- Cabeceras de seguridad en Vercel; solo la página de reserva puede incrustarse en otras webs, para que funcione el widget.
 
 ## Arrancar en local
 
@@ -59,22 +54,6 @@ npm test
 
 Base de datos: crea un proyecto en Supabase y ejecuta `src/supabase/schema.sql` en el SQL Editor.
 
-## Estructura
+## Autor y licencia
 
-```
-api/                    funciones serverless (Stripe Checkout y webhook)
-public/widget.js        widget embebible para webs de negocios
-src/pages/              una carpeta por sección (agenda, clientes, tpv, stock…)
-src/components/         layout, búsqueda global, control de planes
-src/hooks/              negocio actual, plan, móvil
-src/services/           exportar, copias, notificaciones, Google Calendar
-src/supabase/schema.sql esquema y políticas RLS
-```
-
-## Autor
-
-[Iván Pascual López](https://github.com/Ivan-Pascual) · Junior AI & FullStack Developer
-
-## Licencia
-
-MIT
+[Iván Pascual López](https://github.com/Ivan-Pascual) · Junior AI & FullStack Developer · Licencia MIT
