@@ -38,10 +38,11 @@ SaaS de reservas y gestión para negocios locales como peluquerías, centros de 
 
 ## Decisiones de seguridad
 
-- **Row Level Security en las 13 tablas, con 19 políticas**, para que cada negocio solo acceda a sus propios datos aunque se manipule el cliente (`src/supabase/schema.sql`).
+- **Row Level Security activado en todas las tablas** (`src/supabase/schema.sql`). Los usuarios autenticados solo acceden a los datos de su propio negocio.
+- **Lectura pública limitada:** la página de reserva lee datos de disponibilidad sin autenticación. Este apartado se está revisando para que no exponga datos personales ni de facturación.
 - **Claves fuera del código:** solo variables de entorno. La clave de servicio de Supabase y la de Stripe viven únicamente en el servidor (`/api`).
 - **Webhook de Stripe verificado** con `constructEvent` antes de modificar cualquier dato.
-- Cabeceras de seguridad en Vercel. Solo la página de reserva puede incrustarse en otras webs, para que funcione el widget.
+
 
 ## Arrancar en local
 
