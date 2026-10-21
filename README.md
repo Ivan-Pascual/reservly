@@ -1,4 +1,5 @@
 # Reservly
+![CI](https://github.com/Ivan-Pascual/reservly/actions/workflows/ci.yml/badge.svg)
 
 > **Estado:** prototipo funcional en fase de validación. Todavía no lo usa ningún negocio real.
 
