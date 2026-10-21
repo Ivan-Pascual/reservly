@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { usePlan } from '../../hooks/usePlan';
 
-const ADMIN_EMAIL = 'ivanpascual100@gmail.com';
+const ADMIN_EMAIL = process.env.REACT_APP_ADMIN_EMAIL;
 
 function NavItem({ to, emoji, label, badge, onClose, bloqueado }) {
   const navigate = useNavigate();
