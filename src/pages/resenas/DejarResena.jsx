@@ -19,7 +19,7 @@ export default function DejarResena() {
   const fetchDatos = async () => {
     // 1. Buscar negocio por slug
     const { data: neg } = await supabase
-      .from('negocios').select('id, nombre, slug, direccion')
+      .from('negocios_publicos').select('id, nombre, slug, direccion')
       .eq('slug', slug).single();
 
     if (!neg) { setEstado('error'); return; }

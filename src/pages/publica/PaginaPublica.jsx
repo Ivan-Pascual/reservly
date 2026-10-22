@@ -94,12 +94,12 @@ export default function PaginaPublica() {
   useEffect(() => { fetchNegocio(); }, [slug]); // eslint-disable-line
 
   const fetchNegocio = async () => {
-    const { data: neg } = await supabase.from('negocios').select('*').eq('slug', slug).single();
+    const { data: neg } = await supabase.from('negocios_publicos').select('*').eq('slug', slug).single();
     if (!neg) { setNotFound(true); setLoading(false); return; }
     setNegocio(neg);
     const [serRes, empRes, cierresRes, cfgRes] = await Promise.all([
       supabase.from('servicios').select('*').eq('negocio_id', neg.id).eq('activo', true),
-      supabase.from('empleados').select('*').eq('negocio_id', neg.id).eq('activo', true),
+      supabase.from('empleados_publicos').select('*').eq('negocio_id', neg.id).eq('activo', true),
       supabase.from('cierres').select('*').eq('negocio_id', neg.id),
       supabase.from('configuracion').select('*').eq('negocio_id', neg.id).single(),
     ]);

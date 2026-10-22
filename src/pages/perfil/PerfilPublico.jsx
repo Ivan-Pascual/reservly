@@ -17,7 +17,7 @@ export default function PerfilPublico() {
 
   const fetchData = async () => {
     const { data: neg } = await supabase
-      .from('negocios').select('*').eq('slug', slug).single();
+      .from('negocios_publicos').select('*').eq('slug', slug).single();
     if (!neg) { setNotFound(true); setLoading(false); return; }
     setNegocio(neg);
 
