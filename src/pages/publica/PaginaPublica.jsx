@@ -111,11 +111,9 @@ export default function PaginaPublica() {
   };
 
   const fetchReservasDelDia = async (fecha, empleadoId) => {
-    const query = supabase.from('reservas').select('hora_inicio, hora_fin')
-      .eq('negocio_id', negocio.id).eq('fecha', fecha).in('estado', ['confirmada','pendiente']);
-    if (empleadoId) query.eq('empleado_id', empleadoId);
-    const { data } = await query;
-    setReservasExistentes(data || []);
+    const { data } = await supabase.rpc('horas_ocupadas', { p_slug: slug, p_fecha: fecha });
+    const filtradas = (data || []).filter(r => !empleadoId || r.empleado_id === empleadoId);
+    setReservasExistentes(filtradas);
   };
 
   const generarHuecos = () => {
@@ -178,30 +176,7 @@ export default function PaginaPublica() {
     if (datosCliente.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosCliente.email)) { setError('El email no tiene un formato válido.'); return; }
     setEnviando(true); setError('');
     try {
-      const hace24h = new Date(Date.now()-24*60*60*1000).toISOString();
-      const { data: clienteSpam } = await supabase.from('clientes').select('id').eq('negocio_id', negocio.id).eq('telefono', telLimpio).single();
-      if (clienteSpam) {
-        const { count } = await supabase.from('reservas').select('*', { count:'exact', head:true })
-          .eq('negocio_id', negocio.id).eq('cliente_id', clienteSpam.id).gte('created_at', hace24h).in('estado', ['pendiente','confirmada']);
-        if (count >= 3) { setError('Has alcanzado el límite de reservas por hoy.'); setEnviando(false); return; }
-      }
       const fechaStr = `${selFecha.getFullYear()}-${String(selFecha.getMonth()+1).padStart(2,'0')}-${String(selFecha.getDate()).padStart(2,'0')}`;
-      const { data: conflicto } = await supabase.from('reservas').select('id')
-        .eq('negocio_id', negocio.id).eq('fecha', fechaStr)
-        .eq('empleado_id', selEmpleado?.id || empleados[0]?.id)
-        .in('estado', ['confirmada','pendiente']).lt('hora_inicio', selHora.horaFin).gt('hora_fin', selHora.hora);
-      if (conflicto?.length > 0) { setError('Este hueco ya fue reservado. Por favor elige otro horario.'); setEnviando(false); return; }
-      let clienteId = null;
-      const { data: clienteExistente } = await supabase.from('clientes').select('id').eq('negocio_id', negocio.id).eq('telefono', telLimpio).single();
-      if (clienteExistente) {
-        clienteId = clienteExistente.id;
-      } else {
-        const { data: nuevoCliente } = await supabase.from('clientes').insert({
-          negocio_id: negocio.id, nombre: datosCliente.nombre,
-          email: datosCliente.email || null, telefono: telLimpio, tag:'nuevo',
-        }).select().single();
-        if (nuevoCliente) clienteId = nuevoCliente.id;
-      }
 
       // Construir respuestas del formulario
       const respuestasGuardar = selServicio?.preguntas?.length > 0
@@ -211,19 +186,20 @@ export default function PaginaPublica() {
           }, {})
         : null;
 
-      const { data: reserva, error: resError } = await supabase.from('reservas').insert({
-        negocio_id:            negocio.id,
-        cliente_id:            clienteId,
-        empleado_id:           selEmpleado?.id || null,
-        servicio_id:           selServicio.id,
-        fecha:                 fechaStr,
-        hora_inicio:           selHora.hora,
-        hora_fin:              selHora.horaFin,
-        estado:                'pendiente',
-        precio_final:          selServicio.precio,
-        respuestas_formulario: respuestasGuardar,
-      }).select().single();
-      if (resError) throw new Error('Error al crear la reserva.');
+      // Horario, conflictos, anti-spam y precio los valida el servidor
+      const { error: resError } = await supabase.rpc('reservar_publica', {
+        p_slug:        slug,
+        p_fecha:       fechaStr,
+        p_hora_inicio: selHora.hora,
+        p_hora_fin:    selHora.horaFin,
+        p_empleado:    selEmpleado?.id || null,
+        p_servicio:    selServicio.id,
+        p_nombre:      datosCliente.nombre.trim(),
+        p_telefono:    telLimpio,
+        p_email:       datosCliente.email || null,
+        p_respuestas:  respuestasGuardar,
+      });
+      if (resError) throw new Error(resError.message);
       if (datosCliente.email) {
         const { data: servicioData } = await supabase.from('servicios').select('nombre').eq('id', selServicio.id).single();
         notificaciones.confirmarReserva({ cliente:{ nombre:datosCliente.nombre, email:datosCliente.email }, negocio, reserva:{ fecha:fechaStr, hora_inicio:selHora.hora }, servicio:servicioData, empleado:selEmpleado });
