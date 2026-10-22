@@ -52,13 +52,13 @@ export default function DejarResena() {
     if (puntuacion === 0) return;
     setEnviando(true);
     try {
-      await supabase.from('resenas').insert({
-        negocio_id:  negocio.id,
-        cliente_id:  reserva.clientes?.id || null,
-        reserva_id:  reservaId,
-        puntuacion,
-        comentario:  comentario.trim() || null,
+      const { error: resError } = await supabase.rpc('publicar_resena', {
+        p_slug:       slug,
+        p_reserva_id: reservaId,
+        p_puntuacion: puntuacion,
+        p_comentario: comentario,
       });
+      if (resError) throw new Error(resError.message);
       setEstado('enviada');
     } catch {
       setEstado('error');
