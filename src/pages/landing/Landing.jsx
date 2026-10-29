@@ -2,39 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const FEATURES = [
-  { emoji:'ðŸ“…', titulo:'Reservas 24/7',        desc:'Tus clientes reservan desde el mÃ³vil. Sin llamadas, sin WhatsApps.' },
-  { emoji:'ðŸ’³', titulo:'TPV integrado',         desc:'Cobra en el mostrador. El stock se descuenta automÃ¡ticamente.' },
-  { emoji:'ðŸ“¦', titulo:'Stock con escÃ¡ner',     desc:'Pistola de cÃ³digo de barras o cÃ¡mara del mÃ³vil. Sin complicaciones.' },
-  { emoji:'ðŸ‘¥', titulo:'GestiÃ³n de clientes',   desc:'Historial completo, notas, filtros por edad y sexo.' },
-  { emoji:'ðŸ“Š', titulo:'EstadÃ­sticas reales',   desc:'FacturaciÃ³n, top servicios, empleados mÃ¡s productivos.' },
-  { emoji:'Ã°Å¸â€”â€œÃ¯Â¸Â', titulo:'Google Calendar sync',  desc:'Tus reservas aparecen en tu calendario con un clic.' },
-  { emoji:'Ã°Å¸â€â€', titulo:'Alertas instantÃ¡neas',  desc:'NotificaciÃ³n push en el mÃ³vil cada vez que llega una reserva.' },
-  { emoji:'ðŸ“±', titulo:'InstÃ¡lala como app',    desc:'PWA instalable en iOS y Android. Sin App Store.' },
-  { emoji:'Ã°Å¸Ââ€¦', titulo:'FidelizaciÃ³n',          desc:'Sellos digitales por visita. Tus clientes vuelven solos.' },
-  { emoji:'Ã°Å¸â€â€”', titulo:'Widget embebible',      desc:'Una lÃ­nea de cÃ³digo y tienes reservas en tu web.' },
-  { emoji:'â­', titulo:'ReseÃ±as verificadas',   desc:'Perfil pÃºblico con reseÃ±as reales de clientes verificados.' },
-  { emoji:'ðŸŽ', titulo:'Bonos y descuentos',    desc:'Crea bonos de sesiones y descuentos para fidelizar.' },
+  { emoji:'📅', titulo:'Reservas 24/7',        desc:'Tus clientes reservan desde el móvil. Sin llamadas, sin WhatsApps.' },
+  { emoji:'💳', titulo:'TPV integrado',         desc:'Cobra en el mostrador. El stock se descuenta automáticamente.' },
+  { emoji:'📦', titulo:'Stock con escáner',     desc:'Pistola de código de barras o cámara del móvil. Sin complicaciones.' },
+  { emoji:'👥', titulo:'Gestión de clientes',   desc:'Historial completo, notas, filtros por edad y sexo.' },
+  { emoji:'📊', titulo:'Estadísticas reales',   desc:'Facturación, top servicios, empleados más productivos.' },
+  { emoji:'🗓️', titulo:'Google Calendar sync',  desc:'Tus reservas aparecen en tu calendario con un clic.' },
+  { emoji:'🔔', titulo:'Alertas instantáneas',  desc:'Notificación push en el móvil cada vez que llega una reserva.' },
+  { emoji:'📱', titulo:'Instálala como app',    desc:'PWA instalable en iOS y Android. Sin App Store.' },
+  { emoji:'🏅', titulo:'Fidelización',          desc:'Sellos digitales por visita. Tus clientes vuelven solos.' },
+  { emoji:'🔗', titulo:'Widget embebible',      desc:'Una línea de código y tienes reservas en tu web.' },
+  { emoji:'⭐', titulo:'Reseñas verificadas',   desc:'Perfil público con reseñas reales de clientes verificados.' },
+  { emoji:'🎁', titulo:'Bonos y descuentos',    desc:'Crea bonos de sesiones y descuentos para fidelizar.' },
 ];
 
 const PASOS = [
   { num:'01', titulo:'Crea tu cuenta',        desc:'Registro en 30 segundos. Sin tarjeta.' },
   { num:'02', titulo:'Configura tu negocio',  desc:'Servicios, horarios y empleados en 5 minutos.' },
-  { num:'03', titulo:'Comparte tu enlace',    desc:'Tus clientes reservan desde su mÃ³vil.' },
+  { num:'03', titulo:'Comparte tu enlace',    desc:'Tus clientes reservan desde su móvil.' },
 ];
 
 const PLANES = [
   {
-    nombre: 'BÃ¡sico',
+    nombre: 'Básico',
     precio: 19,
-    desc: 'Para autÃ³nomos y negocios de una persona.',
-    features: ['Reservas ilimitadas','Hasta 2 empleados','TPV y stock con escÃ¡ner','Google Calendar sync','Notificaciones push','PWA instalable','Backup de datos'],
+    desc: 'Para autónomos y negocios de una persona.',
+    features: ['Reservas ilimitadas','Hasta 2 empleados','TPV y stock con escáner','Google Calendar sync','Notificaciones push','PWA instalable','Backup de datos'],
     dark: false,
   },
   {
     nombre: 'Pro',
     precio: 39,
     desc: 'Para negocios con equipo que quieren automatizar.',
-    features: ['Todo lo del BÃ¡sico','Empleados ilimitados','WhatsApp automÃ¡tico','FidelizaciÃ³n con sellos','Widget embebible','Perfil pÃºblico + reseÃ±as','Comisiones automÃ¡ticas','Bonos y descuentos'],
+    features: ['Todo lo del Básico','Empleados ilimitados','WhatsApp automático','Fidelización con sellos','Widget embebible','Perfil público + reseñas','Comisiones automáticas','Bonos y descuentos'],
     dark: true,
     popular: true,
   },
@@ -42,7 +42,7 @@ const PLANES = [
     nombre: 'Agencia',
     precio: 79,
     desc: 'Para gestores que llevan varios negocios.',
-    features: ['Todo lo del Pro','Multi-sede (5 locales)','Factura electrÃ³nica','Panel multi-negocio','API acceso','Soporte prioritario'],
+    features: ['Todo lo del Pro','Multi-sede (5 locales)','Factura electrónica','Panel multi-negocio','API acceso','Soporte prioritario'],
     dark: false,
   },
 ];
@@ -130,7 +130,7 @@ export default function Landing() {
 
         {/* Desktop nav */}
         <div className="nav-desktop" style={{ display:'flex', alignItems:'center', gap:28 }}>
-          <a href="#como-funciona" className="nav-link">CÃ³mo funciona</a>
+          <a href="#como-funciona" className="nav-link">Cómo funciona</a>
           <a href="#features" className="nav-link">Funciones</a>
           <a href="#precios" className="nav-link">Precios</a>
           <a href="/precios" className="nav-link">vs Booksy</a>
@@ -141,7 +141,7 @@ export default function Landing() {
         </div>
 
         {/* Mobile hamburger */}
-        <button className="nav-mobile-btn" aria-label="Abrir menÃº" onClick={() => setMenuAbierto(!menuAbierto)}
+        <button className="nav-mobile-btn" aria-label="Abrir menú" onClick={() => setMenuAbierto(!menuAbierto)}
           style={{ display:'none', background:'transparent', border:'none', cursor:'pointer', flexDirection:'column', gap:5, padding:8 }}>
           <div style={{ width:22, height:2, background:'#063D2A', borderRadius:2, transition:'all 0.2s', transform: menuAbierto ? 'rotate(45deg) translate(5px, 5px)' : 'none' }}/>
           <div style={{ width:22, height:2, background:'#063D2A', borderRadius:2, transition:'all 0.2s', opacity: menuAbierto ? 0 : 1 }}/>
@@ -152,14 +152,14 @@ export default function Landing() {
       {/* Mobile menu */}
       {menuAbierto && (
         <div style={{ position:'fixed', top:68, left:0, right:0, zIndex:99, background:'#fff', borderBottom:'1px solid #EAF5EF', padding:'16px 24px', display:'flex', flexDirection:'column', gap:12, boxShadow:'0 8px 24px rgba(0,0,0,0.08)' }}>
-          {[['#como-funciona','CÃ³mo funciona'],['#features','Funciones'],['#precios','Precios'],['/precios','Comparativa vs Booksy']].map(([href, label]) => (
+          {[['#como-funciona','Cómo funciona'],['#features','Funciones'],['#precios','Precios'],['/precios','Comparativa vs Booksy']].map(([href, label]) => (
             <a key={href} href={href} onClick={() => setMenuAbierto(false)}
               style={{ fontSize:15, fontWeight:600, color:'#0B1E16', textDecoration:'none', padding:'8px 0', borderBottom:'1px solid #EAF5EF' }}>
               {label}
             </a>
           ))}
           <button onClick={() => navigate('/login')} className="btn-secondary" style={{ width:'100%', marginTop:4 }}>Entrar</button>
-          <button onClick={() => navigate('/login')} className="btn-primary" style={{ width:'100%' }}>Empezar gratis â†’</button>
+          <button onClick={() => navigate('/login')} className="btn-primary" style={{ width:'100%' }}>Empezar gratis →</button>
         </div>
       )}
 
@@ -169,7 +169,7 @@ export default function Landing() {
         <div style={{ position:'absolute', bottom:-80, left:-100, width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(6,61,42,0.06) 0%, transparent 70%)', pointerEvents:'none' }}/>
 
         <div className="fade-up" style={{ marginBottom:24 }}>
-          <span className="pill">ðŸš€ Ya disponible Â· 30 dÃ­as gratis sin tarjeta</span>
+          <span className="pill">🚀 Ya disponible · 30 días gratis sin tarjeta</span>
         </div>
 
         <h1 className="fade-up-2" style={{ fontSize:'clamp(32px, 5.5vw, 68px)', fontWeight:800, color:'#063D2A', lineHeight:1.1, letterSpacing:-2, marginBottom:24, maxWidth:820 }}>
@@ -183,12 +183,12 @@ export default function Landing() {
         </h1>
 
         <p className="fade-up-3" style={{ fontSize:'clamp(15px, 2vw, 20px)', color:'#6B9080', maxWidth:560, margin:'0 auto 40px', lineHeight:1.7 }}>
-          Reservas online, gestiÃ³n de clientes, stock y cobros Ã¢â‚¬â€ todo en un panel limpio y rÃ¡pido. Sin complicaciones.
+          Reservas online, gestión de clientes, stock y cobros — todo en un panel limpio y rápido. Sin complicaciones.
         </p>
 
         <div className="fade-up-4 hero-btns" style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginBottom:48, width:'100%', maxWidth:560 }}>
           <button onClick={() => navigate('/login')} className="btn-primary" style={{ fontSize:16, padding:'16px 32px', flex:1, minWidth:220 }}>
-            Empieza gratis Ã¢â‚¬â€ sin tarjeta â†’
+            Empieza gratis — sin tarjeta →
           </button>
           <button onClick={() => navigate('/demo')} className="btn-secondary" style={{ fontSize:16, padding:'16px 32px', flex:1, minWidth:160 }}>
             Ver demo en vivo
@@ -199,7 +199,7 @@ export default function Landing() {
           {[
             { valor:'5 min', label:'para configurar' },
             { valor:'24/7',  label:'reservas online'  },
-            { valor:'0â‚¬',    label:'para empezar'     },
+            { valor:'0€',    label:'para empezar'     },
           ].map(s => (
             <div key={s.label} style={{ textAlign:'center' }}>
               <div style={{ fontSize:28, fontWeight:800, color:'#0A9E6E', fontFamily:'DM Mono, monospace' }}>{s.valor}</div>
@@ -227,19 +227,19 @@ export default function Landing() {
                   <div style={{ width:20, height:20, borderRadius:4, background:'#0A9E6E' }}/>
                   <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Reservly</span>
                 </div>
-                {['âŠž Inicio','ðŸ“… Reservas','Ã°Å¸â€”â€œÃ¯Â¸Â Agenda','ðŸ‘¤ Clientes','ðŸ“¦ Stock','Ã¢Å¡â„¢Ã¯Â¸Â Ajustes'].map((item, i) => (
+                {['⊞ Inicio','📅 Reservas','🗓️ Agenda','👤 Clientes','📦 Stock','⚙️ Ajustes'].map((item, i) => (
                   <div key={i} style={{ padding:'8px 10px', borderRadius:6, marginBottom:2, background: i===0 ? '#0A9E6E' : 'transparent', color: i===0 ? '#fff' : 'rgba(255,255,255,0.5)', fontSize:12, fontWeight: i===0 ? 600 : 400 }}>
                     {item}
                   </div>
                 ))}
               </div>
               <div style={{ flex:1, padding:20, background:'#F4FAF7' }}>
-                <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:16 }}>Buenos dÃ­as, PeluquerÃ­a âœ¨</div>
+                <div style={{ fontSize:13, fontWeight:700, color:'#0B1E16', marginBottom:16 }}>Buenos días, Peluquería ✨</div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
                   {[
                     { l:'Citas hoy', v:'4', dark:true },
                     { l:'Este mes', v:'32' },
-                    { l:'Facturado', v:'840â‚¬' },
+                    { l:'Facturado', v:'840€' },
                     { l:'Clientes', v:'127' },
                   ].map(s => (
                     <div key={s.l} style={{ background: s.dark ? '#063D2A' : '#fff', border:'1px solid #EAF5EF', borderRadius:10, padding:'12px 14px' }}>
@@ -251,9 +251,9 @@ export default function Landing() {
                 <div style={{ background:'#fff', borderRadius:10, padding:14, border:'1px solid #EAF5EF' }}>
                   <div style={{ fontSize:12, fontWeight:700, color:'#0B1E16', marginBottom:10 }}>Agenda de hoy</div>
                   {[
-                    { n:'Carmen LÃ³pez',   s:'Corte y peinado', h:'09:00', c:'#0A9E6E' },
-                    { n:'Ana MartÃ­nez',   s:'Tinte',           h:'10:30', c:'#3B82F6' },
-                    { n:'Rosa FernÃ¡ndez', s:'Manicura',         h:'12:00', c:'#F59E0B' },
+                    { n:'Carmen López',   s:'Corte y peinado', h:'09:00', c:'#0A9E6E' },
+                    { n:'Ana Martínez',   s:'Tinte',           h:'10:30', c:'#3B82F6' },
+                    { n:'Rosa Fernández', s:'Manicura',         h:'12:00', c:'#F59E0B' },
                   ].map((r, i) => (
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom: i<2?'1px solid #EAF5EF':'none' }}>
                       <div style={{ width:3, height:28, borderRadius:2, background:r.c, flexShrink:0 }}/>
@@ -271,10 +271,10 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CÃ³mo funciona */}
+      {/* Cómo funciona */}
       <section id="como-funciona" style={{ padding:'80px 6vw', background:'#fff' }}>
         <div style={{ maxWidth:900, margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontSize:12, fontWeight:700, color:'#0A9E6E', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>CÃ³mo funciona</div>
+          <div style={{ fontSize:12, fontWeight:700, color:'#0A9E6E', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>Cómo funciona</div>
           <h2 style={{ fontSize:'clamp(24px, 3.5vw, 42px)', fontWeight:800, color:'#063D2A', letterSpacing:-1, marginBottom:48 }}>
             Listo en menos de 10 minutos
           </h2>
@@ -292,23 +292,23 @@ export default function Landing() {
           </div>
         </div>
       </section>
-{/* Stock + TPV Ã¢â‚¬â€ diferenciador */}
+{/* Stock + TPV — diferenciador */}
 <section style={{ padding:'60px 6vw', background:'#063D2A' }}>
   <div style={{ maxWidth:1000, margin:'0 auto', display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap:32, alignItems:'center' }}>
     <div>
-      <div style={{ fontSize:12, fontWeight:700, color:'#7FFFD4', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>Diferenciador Ãºnico</div>
+      <div style={{ fontSize:12, fontWeight:700, color:'#7FFFD4', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>Diferenciador único</div>
       <h2 style={{ fontSize:'clamp(22px, 3vw, 38px)', fontWeight:800, color:'#fff', letterSpacing:-1, lineHeight:1.2, marginBottom:16 }}>
         Reservas + Stock + TPV.<br/>Todo en uno.
       </h2>
       <p style={{ fontSize:15, color:'rgba(255,255,255,0.65)', lineHeight:1.8, marginBottom:24 }}>
-        Booksy no tiene gestiÃ³n de stock. Fresha tampoco. Reservly es la Ãºnica herramienta del mercado que une agenda, cobro en mostrador y control de inventario en un solo panel.
+        Booksy no tiene gestión de stock. Fresha tampoco. Reservly es la única herramienta del mercado que une agenda, cobro en mostrador y control de inventario en un solo panel.
       </p>
       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
         {[
-          { emoji:'ðŸ“¦', texto:'Stock con escÃ¡ner de cÃ³digo de barras Ã¢â‚¬â€ pistola o cÃ¡mara del mÃ³vil' },
-          { emoji:'ðŸ’³', texto:'TPV integrado Ã¢â‚¬â€ cobra y el stock se descuenta solo' },
-          { emoji:'âš ï¸', texto:'Alertas de stock mÃ­nimo Ã¢â‚¬â€ nunca te quedes sin producto' },
-          { emoji:'ðŸ“Š', texto:'Valor del inventario en tiempo real' },
+          { emoji:'📦', texto:'Stock con escáner de código de barras — pistola o cámara del móvil' },
+          { emoji:'💳', texto:'TPV integrado — cobra y el stock se descuenta solo' },
+          { emoji:'⚠️', texto:'Alertas de stock mínimo — nunca te quedes sin producto' },
+          { emoji:'📊', texto:'Valor del inventario en tiempo real' },
         ].map((item, i) => (
           <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
             <span style={{ fontSize:18, flexShrink:0 }}>{item.emoji}</span>
@@ -319,16 +319,16 @@ export default function Landing() {
     </div>
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
       {[
-        { nombre:'ChampÃº hidratante', stock:12, min:5, precio:'14.90â‚¬', ok:true },
-        { nombre:'Tinte rubio',       stock:3,  min:5, precio:'8.90â‚¬',  ok:false },
-        { nombre:'Mascarilla',        stock:0,  min:3, precio:'22.50â‚¬', cero:true },
-        { nombre:'Acondicionador',    stock:8,  min:4, precio:'12.90â‚¬', ok:true },
+        { nombre:'Champú hidratante', stock:12, min:5, precio:'14.90€', ok:true },
+        { nombre:'Tinte rubio',       stock:3,  min:5, precio:'8.90€',  ok:false },
+        { nombre:'Mascarilla',        stock:0,  min:3, precio:'22.50€', cero:true },
+        { nombre:'Acondicionador',    stock:8,  min:4, precio:'12.90€', ok:true },
       ].map((p, i) => (
         <div key={i} style={{ background: p.cero ? '#FEF2F2' : !p.ok ? '#FFF8E7' : 'rgba(255,255,255,0.06)', border:`1px solid ${p.cero ? '#FECACA' : !p.ok ? '#F5E4A0' : 'rgba(255,255,255,0.1)'}`, borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
           <div>
             <div style={{ fontSize:13, fontWeight:600, color: p.cero || !p.ok ? '#0B1E16' : '#fff' }}>{p.nombre}</div>
             <div style={{ fontSize:11, color: p.cero ? '#EF4444' : !p.ok ? '#F59E0B' : 'rgba(255,255,255,0.5)', marginTop:2 }}>
-              {p.cero ? 'Sin stock' : !p.ok ? `Stock bajo (${p.stock}/${p.min})` : `Stock OK Â· ${p.stock} uds`}
+              {p.cero ? 'Sin stock' : !p.ok ? `Stock bajo (${p.stock}/${p.min})` : `Stock OK · ${p.stock} uds`}
             </div>
           </div>
           <div style={{ fontSize:13, fontWeight:700, fontFamily:'DM Mono, monospace', color: p.cero ? '#EF4444' : !p.ok ? '#F59E0B' : '#7FFFD4', flexShrink:0 }}>
@@ -345,7 +345,7 @@ export default function Landing() {
           <div style={{ textAlign:'center', marginBottom:48 }}>
             <div style={{ fontSize:12, fontWeight:700, color:'#0A9E6E', textTransform:'uppercase', letterSpacing:'2px', marginBottom:14 }}>Funciones</div>
             <h2 style={{ fontSize:'clamp(24px, 3.5vw, 42px)', fontWeight:800, color:'#063D2A', letterSpacing:-1, marginBottom:14 }}>
-              Todo lo que necesitas, nada mÃ¡s
+              Todo lo que necesitas, nada más
             </h2>
             <p style={{ fontSize:16, color:'#6B9080', maxWidth:500, margin:'0 auto', lineHeight:1.7 }}>
               Sin apps de terceros. Sin integraciones complicadas. Todo en un panel.
@@ -373,7 +373,7 @@ export default function Landing() {
               Simple y transparente
             </h2>
             <p style={{ fontSize:16, color:'#6B9080', lineHeight:1.7 }}>
-              30 dÃ­as gratis sin tarjeta. Luego elige el plan que mejor se adapte.
+              30 días gratis sin tarjeta. Luego elige el plan que mejor se adapte.
             </p>
           </div>
           <div className="precios-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
@@ -388,31 +388,31 @@ export default function Landing() {
                   {p.nombre}
                 </div>
                 <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:6 }}>
-                  <span style={{ fontSize:46, fontWeight:800, color: p.dark ? '#fff' : '#063D2A', fontFamily:'DM Mono, monospace', lineHeight:1 }}>{p.precio}â‚¬</span>
+                  <span style={{ fontSize:46, fontWeight:800, color: p.dark ? '#fff' : '#063D2A', fontFamily:'DM Mono, monospace', lineHeight:1 }}>{p.precio}€</span>
                   <span style={{ fontSize:13, color: p.dark ? 'rgba(255,255,255,0.5)' : '#6B9080' }}>/mes</span>
                 </div>
                 <div style={{ fontSize:13, color: p.dark ? 'rgba(255,255,255,0.6)' : '#6B9080', marginBottom:20, lineHeight:1.5 }}>{p.desc}</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:24 }}>
                   {p.features.map((f, j) => (
                     <div key={j} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color: p.dark ? 'rgba(255,255,255,0.8)' : '#0B1E16' }}>
-                      <span style={{ color: p.dark ? '#7FFFD4' : '#0A9E6E', fontWeight:700, flexShrink:0, marginTop:1 }}>âœ“</span>{f}
+                      <span style={{ color: p.dark ? '#7FFFD4' : '#0A9E6E', fontWeight:700, flexShrink:0, marginTop:1 }}>✓</span>{f}
                     </div>
                   ))}
                 </div>
                 <button onClick={() => navigate('/login')}
                   style={{ width:'100%', padding:'12px', background: p.dark ? '#0A9E6E' : '#063D2A', color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  Empezar gratis â†’
+                  Empezar gratis →
                 </button>
               </div>
             ))}
           </div>
           <div style={{ textAlign:'center', marginTop:16 }}>
             <a href="/precios" style={{ fontSize:13, color:'#0A9E6E', fontWeight:600, textDecoration:'none' }}>
-              Ver comparativa completa vs Booksy y Fresha â†’
+              Ver comparativa completa vs Booksy y Fresha →
             </a>
           </div>
           <div style={{ textAlign:'center', marginTop:10, fontSize:13, color:'#A8C4B8' }}>
-            Sin permanencia Â· Cancela cuando quieras Â· Pago seguro con Stripe
+            Sin permanencia · Cancela cuando quieras · Pago seguro con Stripe
           </div>
         </div>
       </section>
@@ -423,20 +423,20 @@ export default function Landing() {
         <div style={{ position:'relative', zIndex:1, maxWidth:680, margin:'0 auto' }}>
           <h2 style={{ fontSize:'clamp(26px, 4vw, 48px)', fontWeight:800, color:'#fff', letterSpacing:-1.5, lineHeight:1.15, marginBottom:20 }}>
             Empieza hoy.<br/>
-            <span style={{ color:'#7FFFD4' }}>30 dÃ­as gratis.</span>
+            <span style={{ color:'#7FFFD4' }}>30 días gratis.</span>
           </h2>
           <p style={{ fontSize:17, color:'rgba(255,255,255,0.65)', marginBottom:40, lineHeight:1.7 }}>
-            Configura en 5 minutos y comparte tu enlace de reservas. Tus clientes empezarÃ¡n a reservar hoy mismo.
+            Configura en 5 minutos y comparte tu enlace de reservas. Tus clientes empezarán a reservar hoy mismo.
           </p>
           <div className="cta-btns" style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap', marginBottom:24 }}>
             <button onClick={() => navigate('/login')} className="btn-primary" style={{ fontSize:16, padding:'16px 36px' }}>
-              Crear mi cuenta gratis â†’
+              Crear mi cuenta gratis →
             </button>
             <button onClick={() => navigate('/demo')} className="btn-secondary" style={{ fontSize:16, padding:'16px 28px', color:'rgba(255,255,255,0.8)', borderColor:'rgba(255,255,255,0.2)' }}>
               Ver demo primero
             </button>
           </div>
-          <div style={{ fontSize:13, color:'rgba(255,255,255,0.35)' }}>Sin tarjeta Â· Sin permanencia Â· Sin letra pequeÃ±a</div>
+          <div style={{ fontSize:13, color:'rgba(255,255,255,0.35)' }}>Sin tarjeta · Sin permanencia · Sin letra pequeña</div>
         </div>
       </section>
 
@@ -450,12 +450,12 @@ export default function Landing() {
               <circle cx="21" cy="32" r="2.2" fill="#040F09"/>
             </svg>
             <span style={{ fontSize:14, fontWeight:700, color:'#fff' }}>Reservly</span>
-            <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginLeft:6 }}>Â© 2026</span>
+            <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginLeft:6 }}>© 2026</span>
           </div>
           <div style={{ display:'flex', gap:24, flexWrap:'wrap' }}>
             {[
               ['Privacidad','/privacidad'],
-              ['TÃ©rminos','/terminos'],
+              ['Términos','/terminos'],
               ['Precios','/precios'],
               ['hola@getreservly.com','mailto:hola@getreservly.com'],
             ].map(([label, href]) => (
